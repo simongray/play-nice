@@ -1,0 +1,16 @@
+{:deps   {:aliases [:cljs]}
+ :builds {;; clojure -M:cljs compile test          (the tests in Node,
+          ;; where the -browser-test namespaces have nothing to test)
+          :test         {:target           :node-test
+                         :output-to        "target/node-tests.js"
+                         :ns-regexp        "(?<!-browser)-test$"
+                         :autorun          true
+                         :compiler-options {:warnings-as-errors #{:infer-warning}}}
+          ;; clojure -M:cljs compile browser-test, or release for advanced
+          ;; optimizations, then serve target/browser-test, e.g. with
+          ;; .claude/launch.json
+          :browser-test {:target           :browser-test
+                         :test-dir         "target/browser-test"
+                         :ns-regexp        "-test$"
+                         :runner-ns        dk.simongray.play-nice.test-runner
+                         :compiler-options {:warnings-as-errors #{:infer-warning}}}}}

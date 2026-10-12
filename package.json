@@ -1,0 +1,9 @@
+{
+  "name": "play-nice",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Node test tools for play-nice. The library itself has no npm dependencies.",
+  "devDependencies": {
+    "shadow-cljs": "^3.5.3"
+  }
+}

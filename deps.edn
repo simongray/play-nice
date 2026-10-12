@@ -1,0 +1,18 @@
+{:paths ["src"]
+
+ ;; The library has no dependencies: it calls the browser itself.
+ :deps  {}
+
+ :aliases
+ {;; clojure -M:cljs compile test          (the tests in Node)
+  ;; clojure -M:cljs compile browser-test  (the tests in a browser)
+  ;; clojure -M:cljs node-repl             (a REPL, with an nREPL server)
+  :cljs {:extra-paths ["test"]
+         :extra-deps  {org.clojure/clojure {:mvn/version "1.12.5"}
+                       thheller/shadow-cljs {:mvn/version "3.5.3"}}
+         :main-opts   ["-m" "shadow.cljs.devtools.cli"]}
+
+  ;; clojure -T:build jar | install | deploy  (see build.clj)
+  :build {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
+                       slipset/deps-deploy            {:mvn/version "0.2.5"}}
+          :ns-default build}}}
