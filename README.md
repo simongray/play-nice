@@ -57,8 +57,10 @@ A player whose buttons just play, pause and seek the media element
 ```
 
 Call `metadata!` again for each new track, with nil when nothing plays,
-and `(detach!)` when the player goes away. To follow the state of an app,
-e.g. in an atom or with re-frame, see
+and `(detach!)` when the player goes away. The
+[quickstart](doc/quickstart.md) builds such a player from an empty
+project. To follow the state of an app, e.g. in an atom or with
+re-frame, see
 [How to keep the lock screen in step with your app's state](doc/app-state.md).
 
 The keys of the maps are the members of the spec's dictionaries in
@@ -84,7 +86,9 @@ refused:
 ```
 
 To offer only the buttons that work, call `session/support` first. It
-also says whether the browser accepts a position state and chapters.
+also says whether the browser accepts a position state and chapters. To
+test your handlers in Node, see
+[How to test a player without the browser's session](doc/testing.md).
 
 Merge your own handlers over those of `element-actions`, which play,
 pause, stop and seek the element itself. Keep seekto among them: Safari
@@ -109,7 +113,9 @@ The function takes the element's `:duration`, `:current-time`,
 `:playback-rate` and `:paused`, and returns the position state, e.g.
 `{:duration 3600 :playback-rate 1.5 :position 754}`. For a player
 without a media element, e.g. on Web Audio, call `position!` and
-`playback-state!` yourself.
+`playback-state!` yourself, as
+[How to put a Web Audio player on the lock screen](doc/web-audio.md)
+shows.
 
 What the browser can play
 -------------------------

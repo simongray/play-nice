@@ -1,0 +1,8 @@
+{:cljdoc.doc/tree [["Readme" {:file "README.md"}]
+                   ["Quickstart" {:file "doc/quickstart.md"}]
+                   ["How to keep the lock screen in step with your app's state" {:file "doc/app-state.md"}]
+                   ["How to put a Web Audio player on the lock screen" {:file "doc/web-audio.md"}]
+                   ["How to test a player without the browser's session" {:file "doc/testing.md"}]
+                   ["Reference" {:file "doc/reference.md"}]
+                   ["The browsers' differences" {:file "doc/browsers.md"}]
+                   ["Design, October 2026" {:file "doc/design-2026.md"}]]}
