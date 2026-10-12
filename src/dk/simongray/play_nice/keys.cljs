@@ -1,11 +1,11 @@
 (ns dk.simongray.play-nice.keys
-  "The member names of the specs' dictionaries as Clojure keys, e.g.
-  :seek-time for seekTime, and maps turned into JavaScript objects and
-  back.
+  "Conversion between Clojure maps with kebab-case keys and the JavaScript
+  objects of the specs' dictionaries, e.g. {:seek-time 12} and
+  {seekTime: 12}.
 
-  One rule converts a name either way, so a member that the library
-  doesn't know yet passes through. It holds because no member name in
-  these specs has two capitals in a row or a digit."
+  A single rule converts each name both ways, so a member that the
+  library doesn't know yet passes through too. The rule works because no
+  member name in these specs has two capitals in a row or a digit."
   (:require [clojure.string :as str]))
 
 (defn member->keyword
@@ -21,12 +21,15 @@
   (str/replace (name k) #"-([a-z])" #(str/upper-case (second %))))
 
 (defn ->js
-  "The JavaScript value of `x`: a map becomes an object of its member names
-  without its nil values, a keyword its name, and a sequential an array."
+  "Convert `x` to JavaScript:
+
+  - a map to an object with camelCase member names, without nil values
+  - a keyword to its name, e.g. \"seekto\" for :seekto
+  - a sequential to an array"
   [x]
   (cond
-    ;; WebIDL reads a null string as "null", while a missing member takes
-    ;; its default
+    ;; WebIDL turns a null string into "null", but a missing member gets its
+    ;; default
     (map? x)        (->> x
                          (filter (comp some? val))
                          (mapcat (fn [[k v]] [(keyword->member k) (->js v)]))
@@ -36,9 +39,9 @@
     :else           x))
 
 (defn ->clj
-  "The Clojure value of the JavaScript `x`: an object becomes a map of
-  kebab-case keywords and an array a vector, and the values of the `enums`
-  keys become keywords, e.g. those of #{:action}."
+  "Convert the JavaScript `x` to Clojure, with the values of the `enums`
+  keys as keywords, e.g. of #{:action}. An object becomes a map with
+  kebab-case keys, and an array a vector."
   ([x]
    (->clj x #{}))
   ([x enums]

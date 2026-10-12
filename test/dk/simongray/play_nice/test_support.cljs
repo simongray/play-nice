@@ -1,6 +1,6 @@
 (ns dk.simongray.play-nice.test-support
-  "What the async tests share: steps run one after another, and the next
-  event at an element."
+  "Helpers for the async tests: running steps one after another, and
+  waiting for an element's next event."
   (:require [clojure.test :refer [async is]]))
 
 (defn run

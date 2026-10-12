@@ -47,9 +47,10 @@ jobs:
           clojure -M:cljs release test --config-merge '{:autorun false}'
           node target/node-tests.js
 
-      # With advanced optimizations and no infer warnings, in the runner's
-      # Chrome, since Playwright's own Chromium can't play AAC or H.264, and
-      # in Playwright's Firefox and WebKit.
+      # The browser tests, compiled with advanced optimizations and no infer
+      # warnings. They run in the runner's own Chrome, since Playwright's
+      # Chromium can't play AAC or H.264, and in Playwright's Firefox and
+      # WebKit.
       - name: Browser tests in Chrome, Firefox and WebKit
         run: |
           npx playwright install --with-deps firefox webkit

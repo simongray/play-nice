@@ -1,17 +1,17 @@
 (ns dk.simongray.play-nice.session
-  "The Media Session of the page, i.e. what the lock screen, the
-  notification and the headphone buttons show and do for what plays.
+  "The page's Media Session, which puts what plays on the lock screen and
+  in the notifications, and lets the headphone buttons control it.
 
-  The calls set the page's session, and do nothing where the browser has
-  none, e.g. in Node or the Android WebView. Each takes these opts:
+  The functions that touch the browser do nothing where it has no Media
+  Session, e.g. in Node or the Android WebView. Each takes these opts:
 
   - :session, the MediaSession to set instead of the page's, e.g. a
     stand-in in a test, or nil for none
 
   The keys of the maps are the members of the spec's dictionaries in
   kebab-case, and the values of its enums are keywords, e.g. {:action
-  :seekto :seek-time 754.2}. A player of the media element `audio` with no
-  rules of its own needs three calls:
+  :seekto :seek-time 754.2}. A player whose buttons just play, pause and
+  seek its media element needs three calls:
 
       (def detach!
         (attach! audio))
@@ -30,7 +30,7 @@
     :previousslide :nextslide :enterpictureinpicture :voiceactivity})
 
 (def element-events
-  "The events of a media element that attach! follows: those that change
+  "The events of a media element that attach! listens to: those that change
   its duration or rate, make its position jump, start or stop it, or give
   it a new source."
   ["loadedmetadata" "durationchange" "play" "playing" "pause" "seeked"
@@ -42,8 +42,8 @@
   (js/Number.isFinite x))
 
 (defn ^:no-doc within
-  "The position `x` kept within 0 and the `duration`, where a duration that
-  isn't finite has no end."
+  "The position `x`, kept between 0 and the `duration`. A duration that
+  isn't finite sets no upper bound."
   [duration x]
   (cond-> (max 0 x)
     (finite? duration) (min duration)))
@@ -53,9 +53,9 @@
   "The position state of a player `position` seconds into a `duration` at
   `rate`, or nil while the duration is unknown.
 
-  The position stays within the duration, and a rate that isn't a finite
-  number other than 0 counts as 1, since setPositionState throws for
-  either. An infinite duration is a live stream."
+  The position stays within the duration, and a rate of 0, or one that
+  isn't finite, counts as 1, since setPositionState throws for either. An
+  infinite duration means a live stream."
   [duration rate position]
   (when (and (number? duration) (pos? duration))
     {:duration      duration
@@ -63,16 +63,16 @@
      :position      (within duration (if (finite? position) position 0))}))
 
 (defn element-position
-  "The position state of a media element, from the map `element` of its
-  :duration, :current-time and :playback-rate, or nil while its duration
+  "The position state of a media element, from `element`, a map of its
+  :duration, :current-time and :playback-rate, or nil while the duration
   is unknown."
   [{:keys [duration current-time playback-rate] :as element}]
   (position-state duration playback-rate current-time))
 
 (defn element-state
-  "What the session shows for a media element, from the map `element` of
-  its attributes: its :playback-state, and the :position-state that the
-  function `position-fn` gives for the element, e.g. element-position."
+  "The :playback-state and :position-state that the session shows for
+  `element`, a map of a media element's attributes. The position state
+  comes from `position-fn`, e.g. element-position."
   [position-fn {:keys [paused] :as element}]
   {:playback-state (if paused :paused :playing)
    :position-state (position-fn element)})
@@ -80,11 +80,14 @@
 ;; §10: seekTime for seekto, and a seekOffset that may be missing for
 ;; seekbackward and seekforward
 (defn seek-position
-  "The position that the seek action of `details` goes to on a media
-  element, from the map `element` of its :current-time and :duration, or
-  nil for another action or a seek without a time or an offset. The
-  `offsets` give the seconds of seekbackward and seekforward where the
-  details have none, e.g. {:seekbackward 15 :seekforward 30}."
+  "Where the seek action of `details` goes on a media element, from
+  `element`, a map of its :current-time and :duration, and the `offsets`
+  of seekbackward and seekforward in seconds, e.g. {:seekbackward 15
+  :seekforward 30}.
+
+  An offset in the details goes first. The position stays between 0 and
+  the duration, and it's nil for another action, or for a seek without a
+  time or an offset."
   [{:keys [action seek-offset seek-time] :as details}
    {:keys [current-time duration] :as element}
    offsets]
@@ -98,15 +101,15 @@
       (within duration target))))
 
 (defn- chapter?
-  "Whether the `chapter` has a start time that Chromium takes: none, which
-  means 0, or a finite number of 0 or more."
+  "Whether the `chapter` has a start time that Chromium accepts: none,
+  which means 0, or a finite number of 0 or more."
   [{t :start-time :as chapter}]
   (or (nil? t) (and (finite? t) (>= t 0))))
 
 ;; §6 to §8: MediaMetadataInit, ChapterInformationInit and MediaImage
 (defn metadata
   "The metadata `m`, a map of the keys of MediaMetadataInit, without what a
-  browser would throw for: the chapters with a :start-time that's
+  browser would throw for. That's the chapters whose :start-time is
   negative, infinite or NaN, and the images that fail `image-pred`, by
   default those without a :src."
   ([m]
@@ -131,9 +134,10 @@
                    library set on it:
 
                    - :actions, those it gave a handler
-                   - :metadata, the last, and its MediaMetadata :object
+                   - :metadata, the last metadata it set, and :object,
+                     its MediaMetadata
                    - :detach, the function that ends the attachment
-                   - :support, what support found"}
+                   - :support, the answer of support"}
   states
   (js/WeakMap.))
 
@@ -161,7 +165,7 @@
 (defn ^:no-doc set-handler!
   "Set the handler of the `action` on the `session` to `f`, a function of
   the action's details as a map, or clear it for nil. Return whether the
-  browser takes the action."
+  browser accepts the action."
   [^js session action f]
   (succeeds? #(.setActionHandler session
                                  (name action)
@@ -171,14 +175,14 @@
   "What the Media Session supports, with the `opts` above, or nil where the
   browser has none:
 
-  - :actions, the set of actions that it takes
-  - :position-state?, whether it takes a position state
-  - :chapter-info?, whether its metadata takes chapters
+  - :actions, the set of actions that it accepts
+  - :position-state?, whether it accepts a position state
+  - :chapter-info?, whether its metadata can have chapters
 
-  The browser lists no actions, but throws for one it lacks. So the first
-  call for a session clears each action that the library hasn't set, and
-  keeps those that don't throw. Call it before you set any handler
-  without the library."
+  No browser lists its actions, but each throws for an action it lacks. So
+  the first call for a session clears each action that the library hasn't
+  set, and keeps those that don't throw. Call it before setting any
+  handler yourself, outside the library."
   ([]
    (support {}))
   ([opts]
@@ -213,7 +217,7 @@
   ([handlers opts]
    (when-let [^js session (media-session opts)]
      (let [st     (state session)
-           ;; what an earlier call set is cleared, unless set again
+           ;; clear what an earlier call set, unless the handlers set it again
            wanted (merge (zipmap (:actions @st) (repeat nil)) handlers)
            taken  (into #{}
                         (keep (fn [[action f]]
@@ -230,15 +234,15 @@
   (succeeds? #(js/MediaMetadata. (keys/->js {:artwork [image]}))))
 
 (defn metadata!
-  "Show the metadata `m` in the Media Session, a map of the keys of
-  MediaMetadataInit, or clear it for nil, with the `opts` above. Return the
+  "Show the metadata `m`, a map of the keys of MediaMetadataInit, in the
+  Media Session, or clear it for nil, with the `opts` above. Return the
   metadata as set, or nil where the browser has no Media Session.
 
-  The metadata as set is without what the browser would throw for: what
-  metadata removes, and the images whose URL doesn't parse. A browser
-  without chapters ignores them. Each change makes a new MediaMetadata,
-  which is the one way that works alike in every engine, but the same
-  metadata twice in a row changes nothing."
+  Before setting it, the call leaves out what the browser would throw for,
+  i.e. what the function metadata leaves out and the images whose URL
+  doesn't parse. A browser without chapters ignores them. Each change makes
+  a new MediaMetadata, the one way that works alike in every engine, but
+  setting the same metadata twice in a row does nothing."
   ([m]
    (metadata! m {}))
   ([m opts]
@@ -255,12 +259,12 @@
        m))))
 
 (defn position!
-  "Set the position `state` of the Media Session, a map of the keys of
-  MediaPositionState, or clear it for nil, with the `opts` above. Return
-  the state as set, or nil.
+  "Show the position `state`, a map of the keys of MediaPositionState, in
+  the Media Session, or clear it for nil, with the `opts` above. Return the
+  state as set, or nil.
 
-  The state goes through position-state first. Where the browser refuses
-  it all the same, e.g. an infinite duration in Safari and Firefox, the
+  The call first corrects the state with position-state. If the browser
+  still refuses it, e.g. an infinite duration in Safari and Firefox, the
   call clears the state, so that the browser follows the media element
   itself."
   ([state]
@@ -295,14 +299,14 @@
    :paused        (.-paused element)})
 
 (defn element-actions
-  "Handlers that play, pause, stop and seek the media `element` itself,
-  with the seconds of the `offsets` of seekbackward and seekforward, e.g.
-  {:seekbackward 15 :seekforward 30}. A skip without an offset is left
-  out, since the spec gives none.
+  "Handlers that play, pause, stop and seek the media `element` itself. The
+  `offsets` give the seconds of seekbackward and seekforward, e.g.
+  {:seekbackward 15 :seekforward 30}, and a skip without one is left out,
+  since the spec has no default.
 
-  Merge your own handlers over them for actions!. Safari drops its own
-  buttons once a page sets a handler, so it needs seekto among them for a
-  scrubber."
+  Merge your own handlers over them before passing them to actions!. Keep
+  seekto among them: Safari drops its own buttons once a page sets a
+  handler, so without seekto its lock screen has no scrubber."
   ([element]
    (element-actions element {}))
   ([^js element offsets]
@@ -336,10 +340,11 @@
     element-position. Without it, the position state stays clear, so that
     the browser follows the element itself.
 
-  At each of element-events, the call shows the element-state of the
-  element. Detaching stops that, clears the position state and declares
-  the playback state :none. Attaching another element detaches this one,
-  since a page has one session."
+  At each of element-events, the call sets the playback state and the
+  position state that element-state returns for the element. Detaching
+  stops that, clears the position state and declares the playback state
+  :none. Attaching another element detaches this one, since a page has
+  one session."
   ([element]
    (attach! element {}))
   ([^js element {:keys [position-fn]

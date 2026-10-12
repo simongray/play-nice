@@ -1,6 +1,6 @@
 (ns dk.simongray.play-nice.keys-test
-  "The member names of the specs both ways, and maps to JavaScript objects
-  and back."
+  "Converting the specs' member names both ways, and maps to JavaScript
+  objects and back."
   (:require [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.keys :as keys]))
 

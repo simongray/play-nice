@@ -11,11 +11,11 @@ it.
   action to function.
 - **The browsers' differences handled once.** Each engine refuses
   actions and position states of its own, and throws where the others
-  don't. The calls catch that and return what was refused. Where the
+  don't. The functions catch that and return what was refused. Where the
   browser has no Media Session, they do nothing.
-- **In step with a media element.** The session follows whether the
-  element plays, and its position too where the browser can't follow it.
-  Detaching lets go of it again.
+- **In step with a media element.** The session shows whether the
+  element plays, and where it is when the browser can't tell by itself.
+  Detaching hands both back to the browser.
 
 > This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
 > a library for making podcast software, where it puts the episode that
@@ -81,13 +81,13 @@ refused:
 ```
 
 To offer only the buttons that work, call `session/support` first. It
-also says whether the browser takes a position state and chapters.
+also says whether the browser accepts a position state and chapters.
 
-The handlers of `element-actions` play, pause, stop and seek the element
-itself, for you to merge your own over. Keep seekto among them: Safari
+Merge your own handlers over those of `element-actions`, which play,
+pause, stop and seek the element itself. Keep seekto among them: Safari
 drops its own buttons once a page sets a handler, so without seekto its
 lock screen has no scrubber. The skips need their seconds, since the
-spec gives no default.
+spec has no default.
 
 The position
 ------------
@@ -110,10 +110,10 @@ without a media element, e.g. on Web Audio, call `position!` and
 What the browser can play
 -------------------------
 
-To choose among the files of an episode or a track, give each as a
-configuration of [Media Capabilities](https://www.w3.org/TR/media-capabilities/)
-to `capabilities/decoding-infos!`, and keep those that `playable?`
-accepts:
+To choose among the files of an episode or a track, describe each as a
+[Media Capabilities](https://www.w3.org/TR/media-capabilities/)
+configuration, ask `capabilities/decoding-infos!` about them, and keep
+those that `playable?` accepts:
 
 ```clojure
 (require '[dk.simongray.play-nice.capabilities :as capabilities])
@@ -127,14 +127,18 @@ accepts:
 ;; => a promise of the Opus file, or of the AAC file where Opus won't play
 ```
 
-Media Capabilities alone gets the commonest podcast files wrong. WebKit
-says no to MP3 and Firefox rejects it, and every engine says no to or
-rejects `audio/mp4` without codecs, which is how most feeds give AAC. A
-video without its width, height, bitrate and frame rate is rejected
-everywhere. Where it says no or rejects, the answer has what canPlayType
-says too, e.g. `{:supported false :smooth false :power-efficient false
-:can-play-type :maybe}`, and `playable?` takes either. The promise never
-rejects.
+On its own, Media Capabilities refuses some of the commonest files:
+
+- WebKit says it can't play MP3, and Firefox rejects the configuration.
+- Every engine refuses `audio/mp4` without codecs, which is how most
+  podcast feeds give AAC.
+- Every engine rejects a video without its width, height, bitrate and
+  frame rate.
+
+So where it says no or rejects a configuration, the answer also has
+canPlayType's, e.g. `{:supported false :smooth false :power-efficient
+false :can-play-type :maybe}`, and `playable?` accepts either. The
+promise never rejects.
 
 Artwork
 -------
@@ -145,7 +149,7 @@ skips those below 114 pixels and Safari those below 128, and both prefer
 The library leaves out an image whose URL doesn't parse, rather than
 fail the call.
 
-Only Chromium takes chapters, and so far it shows them only in the media
+Only Chromium accepts chapters, and so far it shows them only in the media
 controls of ChromeOS, behind a feature that's off by default. The library
 passes them to every browser all the same, since the others ignore them.
 

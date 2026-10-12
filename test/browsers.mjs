@@ -1,11 +1,11 @@
-// Run the browser tests of target/browser-test in Chrome, Firefox and
-// WebKit, print each report, and exit with 1 unless all of them pass.
+// Run the browser tests in target/browser-test in Chrome, Firefox and
+// WebKit, print each report, and exit with 1 unless they all pass.
 //
 //     clojure -M:cljs release browser-test
 //     node test/browsers.mjs
 //
-// Chrome is the installed one, since Playwright's own Chromium can't play
-// AAC or H.264, which the tests of what the browser can play rely on.
+// Chrome is your installed copy, since Playwright's own Chromium can't
+// play AAC or H.264, which the capabilities tests rely on.
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -32,7 +32,8 @@ const server = createServer(async (request, response) => {
   try {
     if (!file.startsWith(root)) throw new Error('outside the tests');
     const body = await readFile(file);
-    response.writeHead(200, { 'content-type': types[extname(file)] ?? 'application/octet-stream' });
+    const type = types[extname(file)] ?? 'application/octet-stream';
+    response.writeHead(200, { 'content-type': type });
     response.end(body);
   } catch {
     response.writeHead(404).end();

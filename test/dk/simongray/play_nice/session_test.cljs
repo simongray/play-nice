@@ -1,6 +1,6 @@
 (ns dk.simongray.play-nice.session-test
-  "The pure functions of the Media Session, and the calls without a
-  session."
+  "The pure functions of the Media Session, and the others where there's
+  no session."
   (:require [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.session :as session]))
 

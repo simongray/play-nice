@@ -14,12 +14,12 @@ and the edges of section 2 also ran in Chrome 153, Firefox 157 and WebKit
 or on a phone.
 
 The library was named play-nice once the design was decided. It's worth
-a dependency only if it does more than rename
-the JavaScript, so the design is about data in and out, the sharp edges
-of the specs handled once, and a session that keeps in step with a media
-element. The research changed where the value lies. Every engine
-already follows a lone media element by itself, so the sharp edges matter
-more than we expected, and `attach!` less (section 3.4).
+a dependency only if it does more than rename the JavaScript, so the
+design is about data in and out, the sharp edges of the specs handled
+once, and a session that keeps in step with a media element. The
+research changed where the value lies. Every engine already follows a
+lone media element by itself, so the sharp edges matter more than we
+expected, and `attach!` less (section 3.4).
 
 
 ## 1. Scope
@@ -38,10 +38,10 @@ more than we expected, and `attach!` less (section 3.4).
 The Media Working Group writes all of the W3C specs here, except Remote
 Playback, which is the Second Screen Working Group's. On 12 October 2026,
 each Editor's Draft had the same date as the latest revision. The
-repositories of Audio Session and Remote Playback hold a later change
-that neither draft has published yet: interruptions in place of
-suspensions for an AudioContext, and a note that a Picture-in-Picture
-window counts as local playback.
+repositories of Audio Session and Remote Playback each hold a later
+change that the drafts don't have yet. In Audio Session, an AudioContext
+is interrupted rather than suspended, and Remote Playback counts a
+Picture-in-Picture window as playing on the device.
 
 ### 1.1 Media Session
 
@@ -54,9 +54,9 @@ The library covers the whole of what a player uses:
 - the playback state (§4.1).
 
 The actions of video calls, e.g. togglemicrophone and hangup, go through
-the same map of handlers as the others. The calls that report whether a
-call's microphone, camera or screen share is on, e.g.
-`setMicrophoneActive`, stay out, since they're for calls rather than
+the same map of handlers as the others. The functions that report
+whether a video call's microphone, camera or screen share is on, e.g.
+`setMicrophoneActive`, stay out, since they're about calls rather than
 playback.
 
 These details of the spec and of the browsers' source shape the design:
@@ -73,8 +73,8 @@ These details of the spec and of the browsers' source shape the design:
   In each, a position state from the page takes over from the element
   until the page clears it.
 - The browser extrapolates the position from the last position state at
-  its playback rate, or at 0 while the actual playback state is paused
-  (§4.5). Chromium counts only a pause that the page declares, though
+  its playback rate, or not at all while the actual playback state is
+  paused (§4.5). Chromium counts only a pause that the page declares, though
   (`RecalculatePositionState` in Blink's `media_session.cc`). So a page
   that sets the position state must set it again at each pause, seek and
   change of rate, and must declare the playback state too. Otherwise the
@@ -89,20 +89,20 @@ These details of the spec and of the browsers' source shape the design:
 The library uses `decodingInfo` (§2.5.2) to find out which file of an
 episode or track the browser can play, e.g. for podcast-clj's
 `:playable-pred` in step 10 of its later plan. It leaves out
-`encodingInfo`, which is for recording and WebRTC, and the configuration
-of a key system, which is EME.
+`encodingInfo`, which is for recording and WebRTC, and key system
+configurations, which are for EME.
 
-On its own, Media Capabilities answers wrongly for the files that apps
-meet. A container that can hold several codecs needs a codecs parameter
-to be valid (§2.3.3), and podcast feeds rarely give one. In Chromium 152,
+On its own, Media Capabilities refuses some of the commonest files. A
+container that can hold several codecs needs a codecs parameter to be
+valid (§2.3.3), and podcast feeds rarely give one. In Chromium 152,
 `audio/mp4` and `audio/x-m4a` without codecs come back as unsupported,
 while `canPlayType` says "maybe" and the file plays. A video
 configuration also requires a width, height, bitrate and frame rate
-(§2.1.4), which an enclosure rarely declares. So the library asks
-`canPlayType` from the HTML Standard whenever Media Capabilities says
-no or rejects the configuration (D7).
+(§2.1.4), which an enclosure rarely declares. So whenever Media
+Capabilities says no or rejects the configuration, the library also asks
+`canPlayType`, from the HTML Standard (D7).
 
-The other engines get even MP3 wrong, as the browser run showed:
+The browser run showed that the other engines refuse even MP3:
 
 | Configuration | Chrome 153 | Firefox 157 | WebKit 27.2 |
 |---|---|---|---|
@@ -119,10 +119,10 @@ In each of these cases, `canPlayType` says "maybe" or "probably".
 Both matter for video, so they come in a later batch:
 
 - **Picture-in-Picture** puts a video in a small window of its own. The
-  API is small, but its promises and events read better as data, and the
-  Media Session's enterpictureinpicture action lets Chrome open it when
-  the user leaves the tab: from Chrome 120 for video calls, and from
-  Chrome 134 for playback, according to Chrome's blog. The
+  API is small, but its promises and events read better as data. The
+  Media Session's enterpictureinpicture action also lets Chrome open it
+  when the user leaves the tab, for video calls from Chrome 120 and for
+  playback from Chrome 134, according to Chrome's blog. The
   `autoPictureInPicture` attribute of a video was taken out of the spec
   in December 2022, in
   [w3c/picture-in-picture#216](https://github.com/w3c/picture-in-picture/pull/216).
@@ -132,7 +132,7 @@ Both matter for video, so they come in a later batch:
   `webkitShowPlaybackTargetPicker`. Firefox has neither.
 
 Document Picture-in-Picture is left out. It opens a whole page in a
-small window, which is about windows rather than media, and it's a
+small window, which is a matter of windows rather than media, and it's a
 Community Group draft that Safari doesn't have.
 
 ### 1.4 Autoplay Policy Detection and Audio Session
@@ -140,31 +140,33 @@ Community Group draft that Safari doesn't have.
 **Autoplay Policy Detection** gives a page `navigator.getAutoplayPolicy`,
 which answers "allowed", "allowed-muted" or "disallowed" for media
 elements or Web Audio. Only Firefox ships it, since version 112, so a
-function over it would answer "don't know" in Chrome and Safari. Apps
-call `play()` and look at how its promise fails instead.
+function over it would answer "don't know" in Chrome and Safari. The
+usual way is to call `play()` and check how its promise fails.
 
 **Audio Session** lets a page say what kind of audio it plays, e.g.
 "playback" or "ambient", and follow interruptions such as a phone call.
 Safari has had `type` since 16.4, and Firefox has `type`, `state` and the
-statechange event in Nightly. Chrome has no plans. Dale Curtis said so
+statechange event in Nightly. Chrome has no plans: Dale Curtis said so
 at the Media WG meeting of
-[9 September 2025](https://www.w3.org/2025/09/09-mediawg-irc), and at
-that of [11 August 2026](https://www.w3.org/2026/08/11-mediawg-minutes.html)
-Sangwhan said Chrome would reconsider once large sites use it.
+[9 September 2025](https://www.w3.org/2025/09/09-mediawg-irc), and
+Sangwhan said at the meeting of
+[11 August 2026](https://www.w3.org/2026/08/11-mediawg-minutes.html)
+that Chrome would reconsider once large sites use it.
 
-One use matters already. Safari shows a player on Web Audio on the lock
-screen only when the page sets the type to "playback", and then ignores
-its playback state and handlers
+One use matters already. Safari puts a player that plays through Web
+Audio on the lock screen only when the page sets the type to "playback",
+and then ignores the page's playback state and handlers
 ([w3c/mediasession#378](https://github.com/w3c/mediasession/issues/378),
-opened by Mozilla in September 2026). A one-line setter could come early
-if a user of the library plays through Web Audio.
+opened by Mozilla in September 2026). So a one-line setter could come
+early, if anyone uses the library with Web Audio.
 
 ### 1.5 Browser support
 
-From MDN's [browser-compat-data](https://github.com/mdn/browser-compat-data)
-8.1.5 of 8 October 2026, read from its built `data.json`, and checked
-against the source files on `main` at 85c50b0 on 12 October 2026, where
-none of these features had changed. A number is the first version with
+The table comes from MDN's
+[browser-compat-data](https://github.com/mdn/browser-compat-data) 8.1.5
+of 8 October 2026, read from its built `data.json`. On 12 October 2026,
+none of these features had changed in the source files on `main`, at
+85c50b0. A number is the first version with
 support, and "no" means none up to the current Chrome 155, Firefox 157
 and Safari 27. Edge follows Chrome from 79.
 
@@ -198,8 +200,8 @@ as BCD notes.
 Beyond the table:
 
 - BCD has no entries for the togglescreenshare and voiceactivity
-  actions. WebKit accepts both where its setting for the call actions is
-  on, as in Safari, and Chromium and Firefox refuse both.
+  actions. WebKit accepts both where its setting for call actions is on,
+  as it is in Safari, while Chromium and Firefox refuse both.
 - The Android WebView has no Media Session at all, as BCD records with
   [crbug 40611412](https://crbug.com/40611412). An app in Capacitor or
   Cordova on Android needs a native plugin for its lock screen.
@@ -241,10 +243,10 @@ position. Video.js, Media Chrome and Plyr have little or nothing. The
 standalone npm packages are small and young, and each has a gap, e.g.
 `media-session` 0.1.0 turns an infinite duration into 0, which breaks a
 live stream. Media Chrome's handling of Picture-in-Picture and Remote
-Playback is the model for the later batch: it retries Picture-in-Picture
-once the metadata has loaded, and treats a `NotSupportedError` from
-`watchAvailability` as an availability it can't know until the user
-asks.
+Playback is the model for the later batch. It retries Picture-in-Picture
+once the metadata has loaded, and takes a `NotSupportedError` from
+`watchAvailability` to mean that availability is unknown until the user
+opens the picker.
 
 
 ## 2. The sharp edges
@@ -256,32 +258,33 @@ in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
 
 - **Feature detection.** Node and the Android WebView have no Media
   Session, `setPositionState` came later than the rest, and only Chromium
-  has chapters. Every call checks first and does nothing where the
+  has chapters. Every function checks first and does nothing where the
   browser lacks it.
 - **Actions.** Every engine throws a TypeError for an action outside its
   own list, since WebIDL converts the string to the enum first, and each
   list differs:
   - Chromium has all but togglescreenshare and voiceactivity (both throw
     in Chromium 152), and threw for skipad before Chrome 128.
-  - WebKit has every action of the spec. It throws for hangup,
-    previousslide, nextslide and enterpictureinpicture, though, which sit
-    behind a setting that's off, and for the call actions where its
-    setting for them is off, as in the Linux ports.
+  - WebKit has every action of the spec, but throws for hangup,
+    previousslide, nextslide and enterpictureinpicture, which sit behind
+    a setting that's off by default. It also throws for the call actions
+    where their own setting is off, as in the Linux ports.
   - Firefox has only play, pause, seekbackward, seekforward, seekto,
     previoustrack, nexttrack, skipad and stop.
 
-  An accepted action needn't be called, e.g. WebKit sends the lock
+  An accepted action may never be called, e.g. WebKit sends the lock
   screen's next button to nexttrack and never to skipad. The library sets
   each handler in a try of its own (D3).
 - **Default buttons.** Without handlers, each engine plays, pauses and
   seeks the element itself, e.g. WebKit with skips of 15 seconds. But
   WebKit drops all but play and pause once the page sets one handler, so
   a page that sets only the track buttons loses the scrubber and the
-  skips on an iPhone. So `element-actions` gives the element's own
-  handlers, to merge with the app's (section 3.3).
-- **The position state.** Its throws differ by engine, from Chromium
-  152, WebKit's IDL and `MediaSession.cpp`, and Firefox's IDL and
-  `MediaSession.cpp`:
+  skips on an iPhone. That's why `element-actions` returns handlers for
+  the element itself, to merge with the app's own (section 3.3).
+- **The position state.** Each engine throws for different position
+  states. The table comes from Chromium 152, and from the IDL and
+  `MediaSession.cpp` of WebKit and Firefox, and the browser run confirmed
+  it:
 
   | Position state | Chromium | Safari | Firefox |
   |---|---|---|---|
@@ -299,9 +302,9 @@ in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
   and the WebKit bug for it is open
   ([259642](https://bugs.webkit.org/show_bug.cgi?id=259642)). The library
   clamps the position and counts a bad rate as 1, as podcast-clj's
-  `position-state` does. It clears with no argument, and clears the state
-  of a live stream where the browser refuses an infinite duration, so
-  that the browser follows the element.
+  `position-state` did. It clears the state without an argument, and also
+  clears it for a live stream where the browser refuses an infinite
+  duration, so that the browser follows the element.
 - **A position state takes over.** Once a page sets it, the browser
   stops following the element, and in Chromium the position runs on
   through a pause that the page doesn't declare (section 1.1). So
@@ -325,15 +328,15 @@ in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
   against the page's base URL and throws a TypeError for one that doesn't
   parse (§6, "convert artwork"), in all three engines. Chromium 152
   throws for `http://[bad`. A podcast's artwork URL comes from a
-  stranger's feed, so podcast-clj's `apply!` can throw today and leave the
-  buttons unset. The library leaves out the images that don't parse and
-  sets the rest.
+  stranger's feed, so podcast-clj's `apply!` could throw and leave the
+  buttons unset, until it moved to play-nice. The library leaves out the
+  images that don't parse and sets the rest.
 - **Choosing the artwork.** Each engine picks an image its own way. On
-  Android, Chromium wants at least 114 pixels and ideally 512, WebKit
-  wants 128 and 512 and tries an image without sizes last, and Firefox
-  ignores declared sizes above 1024. The library passes the images as
-  given, and the README will say to offer a square PNG of 512 by 512 with
-  its sizes and type.
+  Android, Chromium needs at least 114 pixels and prefers 512. WebKit
+  needs 128, prefers 512 and tries an image without sizes last, while
+  Firefox ignores declared sizes above 1024. The library passes the
+  images as given, and the README says to offer a square PNG of 512 by
+  512 with its sizes and type.
 - **Chapters.** A browser without `chapterInfo` ignores the member, as
   WebIDL has it for any dictionary, so the library passes chapters to
   every browser. Even Chromium shows them only in ChromeOS's media
@@ -341,15 +344,16 @@ in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
   data. Chromium 152 throws for a start time that's NaN. The spec also
   throws for a start time that's negative "or greater than duration"
   (§7), where no duration is defined, while Chromium accepts -1. The
-  library leaves out a chapter without a finite start time of 0 or more.
+  library leaves out a chapter whose start time is negative, infinite or
+  NaN.
 - **The playback state.** Assigning a value that isn't in the enum is
   ignored silently, as for any enum attribute in WebIDL. Chromium lets a
   declared "playing" win and honours "paused" only for players it can't
   control, such as Web Audio, while WebKit overwrites the state whenever
-  an element plays or pauses. A page on Web Audio alone needs a declared
-  state for Chromium's controls on desktop, Audio Session for Safari
-  (section 1.4), and a later Firefox
-  ([bug 2067534](https://bugzilla.mozilla.org/show_bug.cgi?id=2067534)).
+  an element plays or pauses. A page that plays only through Web Audio
+  needs a declared state for Chromium's controls on desktop, and Audio
+  Session for Safari's (section 1.4). Firefox doesn't support such a page
+  yet ([bug 2067534](https://bugzilla.mozilla.org/show_bug.cgi?id=2067534)).
 - **Media element events.** The `durationchange` event comes before
   `loadedmetadata`, with an infinite duration for a live stream, and
   again whenever the duration changes, e.g. when an estimate is revised
@@ -379,9 +383,9 @@ in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
 
 | Namespace | What it holds |
 |---|---|
-| `dk.simongray.play-nice.session` | The Media Session: the pure functions, the calls and `attach!` |
+| `dk.simongray.play-nice.session` | The Media Session: its pure functions, the functions that set it, and `attach!` |
 | `dk.simongray.play-nice.capabilities` | What the browser can play, from Media Capabilities and `canPlayType` |
-| `dk.simongray.play-nice.keys` | The spec's names to keywords and back |
+| `dk.simongray.play-nice.keys` | The specs' member names as keywords, and maps to JavaScript and back |
 | `dk.simongray.play-nice.picture-in-picture` | Picture-in-Picture of a video, in a later batch |
 | `dk.simongray.play-nice.remote-playback` | AirPlay and casting, in a later batch |
 
@@ -392,7 +396,7 @@ screen, and it has no dependencies.
 
 Everything is plain maps. The members of the spec's dictionaries become
 kebab-case keywords and the values of its enums become keywords (D1 and
-D2). A map goes back to JavaScript by the reverse of the same rule, so a
+D2). A map goes back to JavaScript by the same rule in reverse, so a
 member that the library doesn't know yet passes through both ways, e.g.
 `enterPictureInPictureReason`, which the spec added in September 2025.
 
@@ -434,14 +438,15 @@ The pure functions:
 
 - `actions`, the set of every action of the spec.
 - `(position-state duration rate position)`, the position state for a
-  player, or nil while the duration is unknown. It's podcast-clj's
-  function, which keeps the position within the duration and counts a
-  rate that isn't a finite number other than 0 as 1.
+  player, or nil while the duration is unknown. It was podcast-clj's,
+  and keeps the position within the duration and counts a rate of 0, or
+  one that isn't finite, as 1.
 - `(element-position element)`, the position state of a media element,
   from a map of its attributes, e.g. `{:duration 3600 :current-time 754
   :playback-rate 1.5 :paused false}`.
-- `(element-state position-fn element)`, what the session shows for the
-  element: its playback state, and the position state of `position-fn`.
+- `(element-state position-fn element)`, the playback state and position
+  state that the session shows for the element, the latter from
+  `position-fn`.
 - `(seek-position details element offsets)`, where a seek action goes on
   the element, within 0 and its duration. The `offsets` give the seconds
   of seekbackward and seekforward when the details have no seek offset.
@@ -449,12 +454,12 @@ The pure functions:
   start time Chromium refuses, and without the images that fail
   `image-pred`, by default those without a `:src`.
 
-The calls, in ClojureScript:
+The functions that touch the browser:
 
 - `(support)`, what the browser's Media Session supports, or nil where
   it has none, e.g. `{:actions #{:play :pause …} :position-state? true
   :chapter-info? false}`.
-- `(metadata! metadata)`, which shows the metadata, or clears it for
+- `(metadata! m)`, which shows the metadata, or clears it for
   nil. It returns the metadata it set, without the artwork that didn't
   parse.
 - `(actions! handlers)`, which sets exactly these handlers and clears any
@@ -468,7 +473,8 @@ The calls, in ClojureScript:
 - `(attach! element opts)`, which keeps the session in step with the
   media element and returns a function that detaches it.
 
-A music player with no rules of its own needs these calls:
+A music player whose buttons just play, pause and seek its media element
+needs three calls:
 
 ```clojure
 (require '[dk.simongray.play-nice.session :as session])
@@ -490,8 +496,9 @@ A music player with no rules of its own needs these calls:
 ### 3.4 Following a media element
 
 Without a position state, every engine follows the media element
-itself (section 1.1), and it sees a stall that a page sees only through
-events. So by default `attach!` leaves the position to the browser (D9):
+itself (section 1.1), and notices a stall, which a page sees only
+through events. So by default `attach!` leaves the position to the
+browser (D9):
 it keeps the position state clear, and declares the playback state from
 the element (D6). For a page with one element that plays its own file,
 that's all, and `attach!` adds little but a clean detach.
@@ -537,7 +544,7 @@ tests, the option `:session` takes another object to set.
   missing, rejects or says no, the answer has `canPlayType`'s answer for
   the content types too, the weakest of the audio's and the video's, e.g.
   `:can-play-type :maybe`.
-- `(decoding-infos! configurations)`, a promise of a map of each
+- `(decoding-infos! configurations)`, a promise of a map from each
   configuration to its answer.
 - `(can-play-type content-type)`, what `canPlayType` says: `:probably`,
   `:maybe`, or nil for no.
@@ -557,9 +564,9 @@ A predicate for podcast-clj's `resolve/enclosure` then takes one promise:
                                     resolve/decoding-configuration)}))))
 ```
 
-Here `resolve/decoding-configuration` would be podcast-clj's, a pure
-function from an enclosure's type, codecs and bitrate to a configuration
-map, since only podcast-clj knows enclosures.
+Here `resolve/decoding-configuration` comes from podcast-clj, which alone
+knows enclosures. It's a pure function from an enclosure to a
+configuration map, added in podcast-clj's cc4561f.
 
 ### 3.6 Picture-in-Picture and Remote Playback
 
@@ -582,14 +589,14 @@ With the session, a handler of enterpictureinpicture that calls
 | Id | Question | Recommendation | Why |
 |---|---|---|---|
 | D1 | Do keys keep the spec's names, e.g. `:seekTime`, or become kebab-case? | Kebab-case, by one rule both ways | It reads as Clojure, and podcast-clj's own maps are kebab-case, e.g. its chapters' `:start-time`. The names convert without a table, since no member has two capitals in a row or a digit, so a new member passes through. The cost is that MDN's examples need translating, and podcast-clj's `episode/metadata` changes two keys. |
-| D2 | Are actions and other enum values strings or keywords? | Keywords, spelled as in the spec, e.g. `:seekto` and `:allowed-muted` | They're closed sets of names, the map of handlers reads best with keyword keys, and `name` and `keyword` lose nothing. podcast-clj's `actions` and `events` change from strings, which costs nothing before its first release. |
-| D3 | How are unsupported actions reported? | `actions!` returns the set of refused actions and never throws, and `support` lists the accepted ones | All an app can do about an unsupported action is leave its button out, which data serves best, and a throw would leave the other handlers unset. No engine lists its actions, but each throws for one it lacks, so `support` tries each once per page with a nil handler, before the library sets any. |
+| D2 | Are actions and other enum values strings or keywords? | Keywords, spelled as in the spec, e.g. `:seekto` and `:allowed-muted` | They're closed sets of names, the map of handlers reads best with keyword keys, and `name` and `keyword` lose nothing. In podcast-clj, `actions` and `events` change from strings, which costs nothing before its first release. |
+| D3 | How are unsupported actions reported? | `actions!` returns the set of refused actions and never throws, and `support` lists the accepted ones | All an app can do about an unsupported action is leave its button out, and data serves that best, while a throw would leave the other handlers unset. No engine lists its actions, but each throws for one it lacks, so `support` tries each once per page with a nil handler, before the library sets any. |
 | D4 | Does `attach!` own the metadata and the handlers too? | No | They change with each track while the element stays, as in podcast-clj, where the track buttons depend on the episode's chapters. Otherwise changing track means attaching again or a third function to update an attachment. The cost is three calls instead of one for a simple player. |
 | D5 | Can two elements be attached at once? | No, attaching one detaches the other | A page has one session, so two attachments would overwrite each other's state. |
-| D6 | Does `attach!` declare the playback state? | Yes | Chromium stops a position state from the page only at a declared pause (section 1.1). Without one, it does no harm: Chromium honours "paused" only for players it can't control, such as Web Audio, and WebKit overwrites the state from the element. |
-| D7 | Does `decoding-info!` fall back to `canPlayType`? | Yes, whenever Media Capabilities says no or rejects | Otherwise the most common podcast files, AAC in MP4 without codecs, count as unplayable in Chromium (section 1.2). The answer keeps both, so an app can tell them apart. |
+| D6 | Does `attach!` declare the playback state? | Yes | Chromium stops a position state from the page only at a declared pause (section 1.1). Without a position state, declaring it does no harm: Chromium honours "paused" only for players it can't control, such as Web Audio, and WebKit overwrites the state from the element. |
+| D7 | Does `decoding-info!` fall back to `canPlayType`? | Yes, whenever Media Capabilities says no or rejects | Otherwise the commonest podcast files count as unplayable: AAC in MP4 without codecs everywhere, and MP3 in Firefox and WebKit (section 1.2). The answer keeps both, so an app can tell them apart. |
 | D8 | Promises or callbacks? | JavaScript promises, as like-minded's `sync!` returns in ClojureScript | The browser's own calls return promises. |
-| D9 | Does `attach!` set the position state by default? | No, only with `:position-fn` | Every engine follows a lone element itself, and sees a stall that the page sees only as events. A position state from the page takes over until it's cleared, so it's worth setting only where the browser can't follow. Shaka Player does the same. The alternative is to take over always, for one behaviour everywhere, as this design first assumed. |
+| D9 | Does `attach!` set the position state by default? | No, only with `:position-fn` | Every engine follows a lone element itself, and notices a stall, which the page sees only through events. A position state from the page takes over until it's cleared, so it's worth setting only where the browser can't follow. Shaka Player does the same. The alternative is to take over always, for one behaviour everywhere, as this design first assumed. |
 | D10 | Do the skips of `element-actions` have a default offset? | No, a skip without one is left out | The spec gives none, and apps differ, e.g. WebKit's own skips are 15 seconds and podcast-clj's are 15 back and 30 forward. |
 
 Decided on 12 October 2026: all as recommended, and batches 1 and 2
@@ -600,35 +607,32 @@ were built the same day.
 
 ### 5.1 What moves
 
-podcast-clj takes no dependency on the library, and an app joins the
-two. From `app.media-session`:
+An app joins the two libraries, since podcast-clj doesn't depend on
+play-nice. The move was done in podcast-clj's 7c437bb. From
+`app.media-session`:
 
-- `position-state` moves to `session/position-state`, with its tests.
-- `apply!` becomes `session/metadata!` and `session/actions!`.
-- `position!` goes, since the browser follows podcast-clj's single
-  element by itself. As the guide calls it, at `loadedmetadata`, `seeked`
-  and `ratechange` but not at `play` or `pause`, it most likely puts
-  Chromium's lock screen ahead after a pause: the position state from
-  the page keeps its rate through the pause (section 1.1). That's read
-  from Blink's source and wasn't tried on a lock screen.
-- The browser test of the session moves to the library's browser tests,
-  and the `browser-test-media-session` configuration of
-  `.claude/launch.json` goes with it.
+- `position-state` moved to `session/position-state`, with its tests.
+- `apply!` became `session/metadata!` and `session/actions!`.
+- `position!` went, since the browser follows podcast-clj's single
+  element by itself. As the guide called it, at `loadedmetadata`,
+  `seeked` and `ratechange` but not at `play` or `pause`, it most likely
+  put Chromium's lock screen ahead after a pause, since a position state
+  from the page keeps its rate through a pause (section 1.1). That was
+  read from Blink's source, and not tried on a lock screen.
+- The browser test of the session moved to the library's browser tests.
 
-What stays is podcast-specific: `seek-actions`, `track-actions`,
+What stayed is podcast-specific: `seek-actions`, `track-actions`,
 `actions` and `events`, which turn the buttons into player events of
 `library/step`. Since `actions` always includes seekto, Safari keeps its
-scrubber. With D1 and D2 they take keywords and read `:seek-offset` and
-`:seek-time`, and `episode/metadata` returns `:chapter-info` and
-`:start-time`. The namespace is then pure, without reader conditionals,
-and its entry in `doc/namespaces.md` loses the sentence on `apply!` and
-`position!`.
+scrubber. With D1 and D2, they took keywords and read `:seek-offset` and
+`:seek-time`, and `episode/metadata` now returns `:chapter-info` and
+`:start-time`. The namespace became pure, without reader conditionals.
 
 ### 5.2 The guide
 
 In "Play episodes" of `building-an-app.md`, the paragraph on the Media
-Session would introduce the library by name and link it, and the example
-would join the two:
+Session now introduces the library by name and links it, and the example
+joins the two:
 
 ```clojure
 (require '[dk.simongray.play-nice.session :as session])
@@ -652,8 +656,9 @@ would join the two:
     (.play audio)))
 ```
 
-The paragraph after it, which says to call `position!` at three events,
-goes. This example couldn't be run, since neither change exists yet.
+The paragraph after it, which said to call `position!` at three events,
+became one sentence saying that the lock screen follows the media
+element. This example wasn't run here.
 
 
 ## 6. Tests
@@ -677,41 +682,39 @@ The browser tests run in a real page, as podcast-clj's does:
 - `actions!` and `support`, which throw nothing, with the refused set
   for the browser at hand.
 - `position!` with each value of section 2 that throws somewhere.
-- `attach!` on an audio element that plays a second of silence, made in
-  the test as a WAV Blob so there's no fixture, and muted so it may play
-  without a click. A recording object as the `:session` shows what was
-  set after play, pause, a seek, a change of rate and a new source, with
-  and without `:position-fn`, and that detaching removes the listeners.
+- `attach!` on a muted video element that plays a second of silence,
+  made in the test as a WAV Blob so there's no fixture. It's a video,
+  since Chrome lets only a muted video play without a click. A recording
+  object as the `:session` shows what was set after play, pause, a seek,
+  a change of rate and a new source, with and without `:position-fn`,
+  and that detaching removes the listeners.
 - The same recording object, made to throw as WebKit's IDL does for
   `{}` and an infinite duration, so that the fallbacks for Safari run in
   every browser.
-- `decoding-infos!` with `audio/mpeg`, `audio/mp4` without codecs, and an
-  invalid configuration.
+- `decoding-infos!` with `audio/mpeg`, `audio/mp4` without codecs, an
+  invalid configuration and nil.
 
 The same tests compile with advanced optimizations and infer warnings as
 errors, which is where a missing `^js` hint shows. The browser tests have
 a runner of their own for that, since the display of shadow-cljs's runner
-can't be compiled with advanced optimizations. CI compiles them so, and
-the runner puts the summary in the page's title, for a browser run to
-read later.
+can't be compiled with advanced optimizations. The runner puts the
+summary in the page's title, where `test/browsers.mjs` reads it.
 
-CI runs the browser tests through Playwright in Chrome, Firefox and
-WebKit (`test/browsers.mjs`), and the engines differ more here than
-anywhere in the siblings, so it may serve as the pilot for podcast-clj's
-step 21. Chrome is the installed one rather than Playwright's Chromium,
-which can't play AAC or H.264. The element test plays a muted video
-rather than audio, since Chrome lets only a muted video play without a
-click.
+CI runs the browser tests in Chrome, Firefox and WebKit through
+Playwright, with `test/browsers.mjs`. The engines differ more here than
+in any of the siblings, so this may serve as the pilot for podcast-clj's
+step 21. Chrome is the runner's installed copy rather than Playwright's
+Chromium, which can't play AAC or H.264.
 
 
 ## 7. Batches
 
 1. The repository as the siblings have it (`deps.edn`, `build.clj`,
-   `shadow-cljs.edn`, `package.json` for the Node tests, CI on GitHub
+   `shadow-cljs.edn`, `package.json` for the tests, CI on GitHub
    Actions, a README and `doc/`), and the session namespace with its
-   tests. Then podcast-clj takes the move and the guide.
+   tests, followed by the move and the guide in podcast-clj. Done.
 2. The capabilities namespace, and podcast-clj's step 10 with
-   `resolve/decoding-configuration`.
+   `resolve/decoding-configuration`. Done.
 3. Picture-in-Picture and Remote Playback, when a video app wants them.
 
 Audio Session and Autoplay Policy Detection wait until a second engine

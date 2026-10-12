@@ -1,6 +1,6 @@
 (ns dk.simongray.play-nice.capabilities-test
-  "What the browser can play: the answers that count as playable, and an
-  answer rather than a rejection for any configuration."
+  "Which answers count as playable, and that even an invalid configuration
+  gets an answer rather than a rejection."
   (:require [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.capabilities :as capabilities]
             [dk.simongray.play-nice.test-support :refer [run]]))

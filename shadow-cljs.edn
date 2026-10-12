@@ -6,9 +6,9 @@
                          :ns-regexp        "(?<!-browser)-test$"
                          :autorun          true
                          :compiler-options {:warnings-as-errors #{:infer-warning}}}
-          ;; clojure -M:cljs compile browser-test, or release for advanced
-          ;; optimizations, then serve target/browser-test, e.g. with
-          ;; .claude/launch.json
+          ;; clojure -M:cljs release browser-test, or compile without
+          ;; advanced optimizations, then node test/browsers.mjs, or serve
+          ;; target/browser-test yourself
           :browser-test {:target           :browser-test
                          :test-dir         "target/browser-test"
                          :ns-regexp        "-test$"

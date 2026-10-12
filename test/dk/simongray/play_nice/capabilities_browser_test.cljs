@@ -1,5 +1,5 @@
 (ns dk.simongray.play-nice.capabilities-browser-test
-  "What a browser says it can play, for the files that apps meet."
+  "What a browser says it can play, for the commonest kinds of file."
   (:require [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.capabilities :as capabilities]
             [dk.simongray.play-nice.test-support :refer [run]]))
@@ -30,11 +30,9 @@
                  (is (= #{mp3 aac nonsense h264} (set (keys infos)))
                      "each configuration once")
                  (is (capabilities/playable? (infos mp3))
-                     "MP3, which Media Capabilities rejects in Firefox and
-                     refuses in WebKit")
+                     "MP3, which Firefox rejects and WebKit refuses")
                  (is (capabilities/playable? (infos aac))
-                     "AAC without codecs, which every engine refuses or
-                     rejects")
+                     "AAC without codecs, which every engine refuses")
                  (is (not (capabilities/playable? (infos nonsense))))
                  (is (= :probably (:can-play-type (infos h264)))
                      "a video that Media Capabilities rejects")))))

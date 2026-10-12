@@ -8,8 +8,8 @@
             [dk.simongray.play-nice.test-support :refer [next-event run]]))
 
 (defn silence
-  "An object URL of a WAV file of a second of silence, in 8000 samples of
-  8 bits."
+  "An object URL of a WAV file that holds a second of silence, as 8000
+  samples of 8 bits."
   []
   (let [n      8000
         buffer (js/ArrayBuffer. (+ 44 n))
@@ -94,7 +94,7 @@
     (reset! calls [])
     (is (= #{} (session/actions! {:play identity} opts)))
     (is (= #{[:handler "play" true] [:handler "seekto" false]} (set @calls))
-        "the action that the call before set is cleared")
+        "clearing the action that the call before set")
     (reset! calls [])
     (is (= (disj session/actions :voiceactivity)
            (:actions (session/support opts))))
@@ -228,5 +228,5 @@
       (session/actions! {})
       (session/position! nil)
       (session/metadata! nil)
-      (is (nil? (.-metadata s)) "no metadata clears it"))
+      (is (nil? (.-metadata s)) "nil clears the metadata"))
     (is (nil? (session/support)) "nothing where the browser has none")))
