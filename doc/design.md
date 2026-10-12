@@ -519,9 +519,12 @@ tests, the option `:session` takes another object to set.
   about a MediaDecodingConfiguration, e.g. `{:supported true :smooth true
   :power-efficient true}`. It never rejects. Where Media Capabilities is
   missing, rejects or says no, the answer has `canPlayType`'s answer for
-  the content type too, e.g. `:can-play-type :maybe`.
+  the content types too, the weakest of the audio's and the video's, e.g.
+  `:can-play-type :maybe`.
 - `(decoding-infos! configurations)`, a promise of a map of each
   configuration to its answer.
+- `(can-play-type content-type)`, what `canPlayType` says: `:probably`,
+  `:maybe`, or nil for no.
 - `(playable? info)`, which is pure: true when the browser supports the
   configuration, or answered "probably" or "maybe" to `canPlayType`.
 
@@ -573,8 +576,8 @@ With the session, a handler of enterpictureinpicture that calls
 | D9 | Does `attach!` set the position state by default? | No, only with `:position-fn` | Every engine follows a lone element itself, and sees a stall that the page sees only as events. A position state from the page takes over until it's cleared, so it's worth setting only where the browser can't follow. Shaka Player does the same. The alternative is to take over always, for one behaviour everywhere, as this design first assumed. |
 | D10 | Do the skips of `element-actions` have a default offset? | No, a skip without one is left out | The spec gives none, and apps differ, e.g. WebKit's own skips are 15 seconds and podcast-clj's are 15 back and 30 forward. |
 
-Decided on 12 October 2026: all as recommended, and batch 1 was built
-the same day.
+Decided on 12 October 2026: all as recommended, and batches 1 and 2
+were built the same day.
 
 
 ## 5. podcast-clj

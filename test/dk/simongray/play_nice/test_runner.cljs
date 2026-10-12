@@ -3,6 +3,9 @@
   the summary into its title, e.g. \"0 failures, 0 errors\". It replaces
   the runner of shadow-cljs, whose display can't be compiled with advanced
   optimizations."
+  ;; recompiled at every build, since the test namespaces of the build are
+  ;; compiled into it, as in shadow-cljs's own runner
+  {:dev/always true}
   (:require [cljs.test :as test]
             [shadow.test :as st]
             [shadow.test.env :as env]))

@@ -2,27 +2,10 @@
   "The Media Session in a browser: the page's own session, and a stand-in
   that records each call, with a media element that plays."
   (:require [clojure.set :as set]
-            [clojure.test :refer [async deftest is]]
+            [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.keys :as keys]
-            [dk.simongray.play-nice.session :as session]))
-
-(defn run
-  "Run the steps `fs` one after another as an async test. Each step is a
-  function of no arguments that returns a value or a promise.
-
-  A deftest runs only the async test that it returns, so it calls `run`
-  once, as its last form."
-  [& fs]
-  (async done
-    (-> (reduce (fn [p f] (.then p (fn [_] (f)))) (js/Promise.resolve nil) fs)
-        (.catch (fn [e] (is false (str "rejected: " e))))
-        (.finally done))))
-
-(defn next-event
-  "A promise of the next event named `event` at the `element`."
-  [^js element event]
-  (js/Promise. (fn [resolve _]
-                 (.addEventListener element event resolve #js {:once true}))))
+            [dk.simongray.play-nice.session :as session]
+            [dk.simongray.play-nice.test-support :refer [next-event run]]))
 
 (defn silence
   "An object URL of a WAV file of a second of silence, in 8000 samples of

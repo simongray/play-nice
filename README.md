@@ -107,6 +107,34 @@ The function takes the element's `:duration`, `:current-time`,
 without a media element, e.g. on Web Audio, call `position!` and
 `playback-state!` yourself.
 
+What the browser can play
+-------------------------
+
+To choose among the files of an episode or a track, give each as a
+configuration of [Media Capabilities](https://www.w3.org/TR/media-capabilities/)
+to `capabilities/decoding-infos!`, and keep those that `playable?`
+accepts:
+
+```clojure
+(require '[dk.simongray.play-nice.capabilities :as capabilities])
+
+(def files
+  [{:type :file :audio {:content-type "audio/ogg; codecs=opus"}}
+   {:type :file :audio {:content-type "audio/mp4"}}])
+
+(-> (capabilities/decoding-infos! files)
+    (.then #(first (filter (comp capabilities/playable? %) files))))
+;; => a promise of the Opus file, or of the AAC file where Opus won't play
+```
+
+In Chromium, Media Capabilities alone says no to a container type without
+codecs, e.g. `audio/mp4`, which is how most podcast feeds give AAC. Every
+engine rejects a video without its width, height, bitrate and frame rate.
+Where it says no or rejects, the answer has what canPlayType says too,
+e.g. `{:supported false :smooth false :power-efficient false
+:can-play-type :maybe}`, and `playable?` takes either. The promise never
+rejects.
+
 Artwork
 -------
 
