@@ -568,6 +568,12 @@ Here `resolve/decoding-configuration` comes from podcast-clj, which alone
 knows enclosures. It's a pure function from an enclosure to a
 configuration map, added in podcast-clj's cc4561f.
 
+This predicate leaves out an enclosure whose type says nothing of its
+format, e.g. application/octet-stream, which a few feeds give. podcast-clj
+counts such a file as playable since 1a0fcba, so its guide asks the
+browser only about the enclosures that have a configuration, and accepts
+the others.
+
 ### 3.6 Picture-in-Picture and Remote Playback
 
 These are sketched only, for the later batch:
