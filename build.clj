@@ -41,8 +41,10 @@
   (format "target/%s-%s.jar" (name lib) version))
 
 (def basis
-  "The project basis, computed on first use."
-  (delay (b/create-basis {:project "deps.edn"})))
+  "The project basis, computed on first use. It leaves out the root
+  deps.edn, whose Clojure would otherwise be a dependency in the pom of a
+  library that has none."
+  (delay (b/create-basis {:project "deps.edn" :root nil})))
 
 (def scm-url
   "The repository, for the pom."
@@ -66,7 +68,7 @@
                             :connection          "scm:git:git://github.com/simongray/play-nice.git"
                             :developerConnection "scm:git:ssh://git@github.com/simongray/play-nice.git"
                             :tag                 (str "v" version)}
-                :pom-data  [[:description "A ClojureScript library for the lock screen, the headphones and the other media integration of a browser."]
+                :pom-data  [[:description "A ClojureScript library that puts what a web page plays on the lock screen, and tells which files the browser can play."]
                             [:url scm-url]
                             [:licenses
                              [:license

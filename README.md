@@ -1,6 +1,8 @@
 play-nice
 =========
 
+[![Clojars Project](https://img.shields.io/clojars/v/dk.simongray/play-nice.svg)](https://clojars.org/dk.simongray/play-nice)
+
 This is a ClojureScript library for the browser's
 [Media Session](https://www.w3.org/TR/mediasession/), which shows what a
 web page plays on the lock screen and lets the headphone buttons control
@@ -25,7 +27,16 @@ it.
 Getting started
 ---------------
 
-Until the first release, use the SHA of the latest commit on `master`:
+For the latest release, add it from
+[Clojars](https://clojars.org/dk.simongray/play-nice) to the `:deps` in
+your `deps.edn`:
+
+```clojure
+dk.simongray/play-nice {:mvn/version "0.1.0"}
+```
+
+For changes that aren't released yet, use the SHA of the latest commit on
+`master` instead:
 
 ```clojure
 dk.simongray/play-nice
@@ -33,8 +44,8 @@ dk.simongray/play-nice
  :git/sha "…"}
 ```
 
-Since shadow-cljs only reads Git dependencies from `deps.edn`, also set
-`:deps true` in your `shadow-cljs.edn`.
+Since shadow-cljs only reads Git dependencies from `deps.edn`, set
+`:deps true` in your `shadow-cljs.edn` for that.
 
 A player whose buttons just play, pause and seek the media element
 `audio` needs three calls:

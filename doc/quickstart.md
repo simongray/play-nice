@@ -7,16 +7,13 @@ and a square PNG.
 
 ## The project
 
-Make a folder for the project, and put this in its `deps.edn`, with the
-SHA of the latest commit of play-nice on `master`:
+Make a folder for the project, and put this in its `deps.edn`:
 
 ```clojure
 {:paths ["src"]
- :deps  {org.clojure/clojure  {:mvn/version "1.12.5"}
-         thheller/shadow-cljs {:mvn/version "3.5.3"}
-         dk.simongray/play-nice
-         {:git/url "https://github.com/simongray/play-nice"
-          :git/sha "…"}}}
+ :deps  {org.clojure/clojure    {:mvn/version "1.12.5"}
+         thheller/shadow-cljs   {:mvn/version "3.5.3"}
+         dk.simongray/play-nice {:mvn/version "0.1.0"}}}
 ```
 
 Then this in its `shadow-cljs.edn`, for a build called `app` and a
