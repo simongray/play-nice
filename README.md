@@ -57,7 +57,9 @@ A player whose buttons just play, pause and seek the media element
 ```
 
 Call `metadata!` again for each new track, with nil when nothing plays,
-and `(detach!)` when the player goes away.
+and `(detach!)` when the player goes away. To follow the state of an app,
+e.g. in an atom or with re-frame, see
+[How to keep the lock screen in step with your app's state](doc/app-state.md).
 
 The keys of the maps are the members of the spec's dictionaries in
 kebab-case, e.g. `:chapter-info` for `chapterInfo`. The actions and the
