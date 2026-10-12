@@ -61,7 +61,8 @@ and `(detach!)` when the player goes away.
 
 The keys of the maps are the members of the spec's dictionaries in
 kebab-case, e.g. `:chapter-info` for `chapterInfo`. The actions and the
-spec's other enum values are keywords, e.g. `:seekto`.
+spec's other enum values are keywords, e.g. `:seekto`. The
+[reference](doc/reference.md) describes every map.
 
 The buttons
 -----------
@@ -158,8 +159,9 @@ Browsers
 
 Chrome, Edge, Firefox and Safari have the Media Session, but the Android
 WebView doesn't, so an app in Capacitor or Cordova on Android needs a
-native plugin for its lock screen. [The design](doc/design.md) lists
-which browser supports which part, as of October 2026.
+native plugin for its lock screen. The [reference](doc/reference.md)
+lists which browser supports which part, and what each engine refuses,
+as of October 2026.
 
 Development
 -----------
