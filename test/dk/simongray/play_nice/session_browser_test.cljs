@@ -141,7 +141,8 @@
   (let [calls   (atom [])
         opts    {:session     (recorder calls {})
                  :position-fn session/element-position}
-        ^js a   (js/document.createElement "audio")
+        ;; a video, since Chrome plays only a muted video without a click
+        ^js a   (js/document.createElement "video")
         detach! (atom nil)
         last-of (fn [kind] (last (filter #(= kind (first %)) @calls)))]
     (set! (.-muted a) true)
@@ -152,8 +153,7 @@
          #(when-not (pos? (.-readyState a)) (next-event a "loadedmetadata"))
          #(is (= [:position {:duration 1 :playback-rate 1 :position 0}]
                  (last-of :position)))
-         ;; muted, so that it may play without a click, and a refusal fails
-         ;; the test rather than leave it waiting
+         ;; a refusal fails the test rather than leave it waiting
          #(let [playing (next-event a "playing")]
             (.then (.play a) (fn [_] playing)))
          #(is (= [:playback-state "playing"] (last-of :playback-state)))
@@ -162,7 +162,8 @@
          #(let [seeked (next-event a "seeked")]
             (set! (.-currentTime a) 0.5)
             seeked)
-         #(is (= 0.5 (:position (second (last-of :position))))
+         ;; WebKit puts it a little past, e.g. at 0.50005
+         #(is (< (abs (- 0.5 (:position (second (last-of :position))))) 0.01)
               "the position after a seek")
          #(let [changed (next-event a "ratechange")]
             (set! (.-playbackRate a) 2)

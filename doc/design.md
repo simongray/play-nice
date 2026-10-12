@@ -8,8 +8,10 @@ of podcast-clj (commit fdaba91) and was written on 12 October 2026.
 Facts about specs and browsers were checked on the primary source unless
 marked *(unverified)*. The probes ran in Chromium 152, which is the
 browser pane of the Claude app. The engines' source was read on `main` on
-the same day, at the commits under Sources. Nothing ran in Safari or
-Firefox.
+the same day, at the commits under Sources. Later that day, the tests
+and the edges of section 2 also ran in Chrome 153, Firefox 157 and WebKit
+27.2 through Playwright 1.64 on macOS, but nothing ran in Safari itself
+or on a phone.
 
 The library was named play-nice once the design was decided. It's worth
 a dependency only if it does more than rename
@@ -99,6 +101,18 @@ configuration also requires a width, height, bitrate and frame rate
 (§2.1.4), which an enclosure rarely declares. So the library asks
 `canPlayType` from the HTML Standard whenever Media Capabilities says
 no or rejects the configuration (D7).
+
+The other engines get even MP3 wrong, as the browser run showed:
+
+| Configuration | Chrome 153 | Firefox 157 | WebKit 27.2 |
+|---|---|---|---|
+| `audio/mpeg` | supported | TypeError | not supported |
+| `audio/mp4` without codecs | not supported | TypeError | TypeError |
+| `audio/mp4; codecs="mp4a.40.2"` | supported | supported | supported |
+| `audio/flac` | supported | supported | not supported |
+| A video without its size | TypeError | TypeError | TypeError |
+
+In each of these cases, `canPlayType` says "maybe" or "probably".
 
 ### 1.3 Picture-in-Picture and Remote Playback
 
@@ -236,7 +250,9 @@ asks.
 ## 2. The sharp edges
 
 Each edge below is handled once in the library. Where it says Chromium
-152, it was tried in the browser pane.
+152, it was tried in the browser pane. The claims about the position
+state, the refused actions, artwork URLs and chapters were later tried
+in Chrome 153, Firefox 157 and WebKit 27.2 too, and all held.
 
 - **Feature detection.** Node and the Android WebView have no Media
   Session, `setPositionState` came later than the rest, and only Chromium
@@ -679,12 +695,13 @@ can't be compiled with advanced optimizations. CI compiles them so, and
 the runner puts the summary in the page's title, for a browser run to
 read later.
 
-Until podcast-clj's step 21 gives the siblings a browser run in CI, the
-browser tests run by hand in the browser pane, with a `launch.json` like
-podcast-clj's. For step 21, Playwright fits this library best, since it
-drives Chromium, Firefox and WebKit, and the engines differ more here
-than anywhere in the siblings. Whether Playwright's WebKit build has the
-Media Session is *(unverified)*.
+CI runs the browser tests through Playwright in Chrome, Firefox and
+WebKit (`test/browsers.mjs`), and the engines differ more here than
+anywhere in the siblings, so it may serve as the pilot for podcast-clj's
+step 21. Chrome is the installed one rather than Playwright's Chromium,
+which can't play AAC or H.264. The element test plays a muted video
+rather than audio, since Chrome lets only a muted video play without a
+click.
 
 
 ## 7. Batches

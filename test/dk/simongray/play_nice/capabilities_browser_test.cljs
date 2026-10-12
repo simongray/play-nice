@@ -19,7 +19,8 @@
   {:type :file :video {:content-type "video/mp4; codecs=\"avc1.42E01E\""}})
 
 (deftest the-answers-of-can-play-type
-  (is (= :probably (capabilities/can-play-type "audio/mpeg")))
+  (is (#{:probably :maybe} (capabilities/can-play-type "audio/mpeg"))
+      "probably in Chromium, and maybe in Firefox and WebKit")
   (is (= :maybe (capabilities/can-play-type "audio/mp4")))
   (is (nil? (capabilities/can-play-type "audio/x-nonsense"))))
 
@@ -28,15 +29,19 @@
                (fn [infos]
                  (is (= #{mp3 aac nonsense h264} (set (keys infos)))
                      "each configuration once")
-                 (is (true? (:supported (infos mp3))))
+                 (is (capabilities/playable? (infos mp3))
+                     "MP3, which Media Capabilities rejects in Firefox and
+                     refuses in WebKit")
                  (is (capabilities/playable? (infos aac))
-                     "AAC without codecs, which Chromium alone would refuse")
+                     "AAC without codecs, which every engine refuses or
+                     rejects")
                  (is (not (capabilities/playable? (infos nonsense))))
                  (is (= :probably (:can-play-type (infos h264)))
                      "a video that Media Capabilities rejects")))))
 
 (deftest the-first-file-that-plays
-  (let [files [nonsense aac mp3]]
+  ;; nil for a file without a type, as podcast-clj's configuration gives it
+  (let [files [nil nonsense aac mp3]]
     (run #(.then (capabilities/decoding-infos! files)
                  (fn [infos]
                    (is (= aac (first (filter (comp capabilities/playable? infos)

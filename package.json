@@ -4,6 +4,7 @@
   "private": true,
   "description": "Node test tools for play-nice. The library itself has no npm dependencies.",
   "devDependencies": {
+    "playwright": "^1.64.0",
     "shadow-cljs": "^3.5.3"
   }
 }

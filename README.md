@@ -127,11 +127,12 @@ accepts:
 ;; => a promise of the Opus file, or of the AAC file where Opus won't play
 ```
 
-In Chromium, Media Capabilities alone says no to a container type without
-codecs, e.g. `audio/mp4`, which is how most podcast feeds give AAC. Every
-engine rejects a video without its width, height, bitrate and frame rate.
-Where it says no or rejects, the answer has what canPlayType says too,
-e.g. `{:supported false :smooth false :power-efficient false
+Media Capabilities alone gets the commonest podcast files wrong. WebKit
+says no to MP3 and Firefox rejects it, and every engine says no to or
+rejects `audio/mp4` without codecs, which is how most feeds give AAC. A
+video without its width, height, bitrate and frame rate is rejected
+everywhere. Where it says no or rejects, the answer has what canPlayType
+says too, e.g. `{:supported false :smooth false :power-efficient false
 :can-play-type :maybe}`, and `playable?` takes either. The promise never
 rejects.
 
@@ -160,12 +161,15 @@ Development
 -----------
 
 ```bash
-npm install                           # once, for the Node tests
-clojure -M:cljs compile test          # the tests in Node
-clojure -M:cljs compile browser-test  # for a browser, from target/browser-test
+npm install                            # once, for the tests
+npx playwright install firefox webkit  # once, for the browsers
+clojure -M:cljs compile test           # the tests in Node
+clojure -M:cljs release browser-test   # the tests for a browser
+node test/browsers.mjs                 # in Chrome, Firefox and WebKit
 ```
 
-The browser tests play a real audio element, and record each call on a
-stand-in session, which can throw as Safari does. They also compile with
-`release`, for advanced optimizations, which is where a missing `^js`
-hint would show.
+The browser tests play a real media element, and record each call on a
+stand-in session, which can throw as Safari does. The last command runs
+them in your Chrome and in Playwright's Firefox and WebKit, as CI does.
+They compile with `release`, for advanced optimizations, which is where
+a missing `^js` hint would show.

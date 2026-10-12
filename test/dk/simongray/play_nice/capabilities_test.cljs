@@ -20,4 +20,8 @@
   (run #(.then (capabilities/decoding-info! {:type :file})
                (fn [info]
                  (is (= {:can-play-type nil} info)
-                     "neither audio nor video, which is invalid")))))
+                     "neither audio nor video, which is invalid")))
+       #(.then (capabilities/decoding-info! nil)
+               (fn [info]
+                 (is (= {:can-play-type nil} info)
+                     "none at all, e.g. for a file without a type")))))

@@ -5,11 +5,12 @@
 
       {:type :file :audio {:content-type \"audio/mpeg\" :bitrate 128000}}
 
-  Media Capabilities alone gets the files that apps meet wrong. It says no
-  to a container type without a codecs parameter, e.g. audio/mp4, which is
-  how most podcast feeds give AAC, and it rejects a video without its
-  width, height, bitrate and frame rate. So where it says no or rejects,
-  the answer also has what canPlayType says, and playable? takes either."
+  Media Capabilities alone gets the files that apps meet wrong. WebKit says
+  no to MP3 and Firefox rejects it, every engine says no to or rejects
+  audio/mp4 without codecs, which is how most podcast feeds give AAC, and
+  a video without its width, height, bitrate and frame rate is rejected
+  everywhere. So where it says no or rejects, the answer also has what
+  canPlayType says, and playable? takes either."
   (:require [dk.simongray.play-nice.keys :as keys]))
 
 (defn- content-types
