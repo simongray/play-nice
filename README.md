@@ -96,9 +96,10 @@ The position
 ------------
 
 Every engine follows a lone media element by itself, so `attach!` leaves
-the position to the browser. Give it a `:position-fn` where the browser
-can't follow, e.g. two players at once in a crossfade, or a clip of a
-longer file:
+the position to the browser, for reasons that
+[the browsers' differences](doc/browsers.md) explains. Give it a
+`:position-fn` where the browser can't follow, e.g. two players at once
+in a crossfade, or a clip of a longer file:
 
 ```clojure
 (session/attach! audio {:position-fn session/element-position})
@@ -130,16 +131,10 @@ those that `playable?` accepts:
 ;; => a promise of the Opus file, or of the AAC file where Opus won't play
 ```
 
-On its own, Media Capabilities refuses some of the commonest files:
-
-- WebKit says it can't play MP3, and Firefox rejects the configuration.
-- Every engine refuses `audio/mp4` without codecs, which is how most
-  podcast feeds give AAC.
-- Every engine rejects a video without its width, height, bitrate and
-  frame rate.
-
-So where it says no or rejects a configuration, the answer also has
-canPlayType's, e.g. `{:supported false :smooth false :power-efficient
+On its own, Media Capabilities refuses some of the commonest files, e.g.
+MP3 in Firefox and WebKit, as [the browsers' differences](doc/browsers.md)
+explains. So where it says no or rejects a configuration, the answer also
+has canPlayType's, e.g. `{:supported false :smooth false :power-efficient
 false :can-play-type :maybe}`, and `playable?` accepts either. The
 promise never rejects.
 

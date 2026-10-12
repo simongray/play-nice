@@ -1,0 +1,106 @@
+# The browsers' differences
+
+The Media Session and Media Capabilities look simple, but each engine
+implements its own part of them and throws where the others don't. This
+page explains how play-nice deals with the differences, and why. The
+research behind it, with its sources, is in
+[the design of October 2026](design-2026.md), and the facts in the
+[reference](reference.md).
+
+
+## The position is the browser's
+
+Without a position state from the page, Chromium, WebKit and Firefox all
+follow the media element themselves. They also notice a stall, which a
+page sees only through events. A position state from the page takes over
+until the page clears it, and then the page must set it again at every
+pause, seek and change of rate. It must also declare the playback state,
+since Chromium stops the position only at a pause that the page declares.
+Otherwise the lock screen most likely runs ahead after a pause, as
+Chromium's source suggests.
+
+So `attach!` leaves the position to the browser, and only declares the
+playback state from the element. That's all a page with one element
+needs. Its `:position-fn` takes over where the browser can't follow, e.g.
+two players at once in a crossfade, since Chromium follows only a single
+player, or a clip of a longer file. Shaka Player, whose Media Session
+support was the most thorough of the JavaScript players we looked at,
+makes the same choice.
+
+
+## A new MediaMetadata for each change
+
+The spec lets a page change the metadata object that the session holds,
+and every engine then updates the lock screen. In practice it goes wrong:
+Chromium detaches an object that's assigned twice, so later changes to it
+are lost, and WebKit fetches the artwork again. The artwork and the
+chapters are frozen arrays anyway.
+
+So `metadata!` builds a new MediaMetadata from the map at each change.
+It skips a map equal to the last, which also makes it safe to call at
+every change of an app's state.
+
+
+## Refused actions are data
+
+Each engine accepts its own list of actions and throws a TypeError for
+the rest: Firefox refuses those of video calls, Chrome refuses
+togglescreenshare and voiceactivity, and Safari refuses hangup, the slide
+actions and enterpictureinpicture.
+A throw would leave the other handlers unset, and all an app can do about
+a refused action is leave its button out. So `actions!` sets each
+handler on its own, and returns the refused ones as a set.
+
+No engine lists the actions it accepts, so `support` finds out by
+clearing each one and noting those that don't throw. An accepted action
+may still never be called, e.g. WebKit sends the lock screen's next
+button to nexttrack and never to skipad.
+
+
+## Safari's own buttons
+
+Without any handlers, every engine plays, pauses and seeks the media
+element itself. Safari drops all but play and pause as soon as a page
+sets one handler, though, so a page that adds only track buttons loses
+its scrubber and its skips. That's why `element-actions` exists: its
+handlers do what the browser would, and an app merges its own over them.
+
+
+## Two answers about what plays
+
+Media Capabilities is the newer way to ask whether a browser can play a
+file, but on its own it refuses some of the commonest ones. Firefox
+rejects MP3, WebKit says it can't play it, and every engine refuses AAC
+in MP4 without a codecs parameter, which is how most podcast feeds give
+it. canPlayType, the older way, says "maybe" or "probably" to all of
+them, and the files play.
+
+So `decoding-info!` asks canPlayType too whenever Media Capabilities
+says no or rejects the configuration. The answer keeps both, so an app
+can still tell a confident yes from a guess, and `playable?` accepts
+either. It never rejects, since an invalid configuration shouldn't stop
+an app from choosing among the others.
+
+
+## Clojure maps, not JavaScript objects
+
+The maps have the spec's member names in kebab-case, and the values of
+its enums as keywords. One rule converts the names both ways, so a member
+that a browser adds before play-nice knows about it passes through. A nil
+value is left out on the way to JavaScript, since WebIDL turns a null
+string into "null", while a missing member gets its default.
+
+
+## What's left out
+
+- **Autoplay Policy Detection.** Only Firefox ships it, so a function
+  over it would answer "don't know" in Chrome and Safari.
+- **Audio Session.** Only Safari ships it, and Chrome has no plans. Safari
+  needs it to show a Web Audio player on the lock screen, which
+  [How to put a Web Audio player on the lock screen](web-audio.md) does
+  by hand.
+- **Picture-in-Picture and Remote Playback.** They matter for video, and
+  wait until a video app wants them.
+- **Document Picture-in-Picture, Media Source Extensions and Encrypted
+  Media Extensions.** They're about windows, streaming and DRM rather
+  than a player's place in the system.
