@@ -442,6 +442,48 @@ What `watch!` passes on, at each enter, resize of the window and leave:
 | `:width`, `:height` | The size of the window in pixels, while it's in it |
 
 
+## Fullscreen
+
+The `fullscreen` namespace follows the
+[Fullscreen](https://fullscreen.spec.whatwg.org/) Living Standard,
+WebKit's own fullscreen of a video, and the
+[Screen Orientation](https://www.w3.org/TR/screen-orientation/) Working
+Draft of 6 August 2026.
+
+### State
+
+What `state` returns, `watch!` passes on and `exit!` answers:
+
+| `:fullscreen` | When |
+|---|---|
+| `:element` | The element is fullscreen |
+| `:video` | Its video is in the system's own player, e.g. on an iPhone |
+| `false` | Neither |
+
+### Answers
+
+What the promise of `enter!` resolves to:
+
+| Answer | When |
+|---|---|
+| `{:fullscreen :element}` | The element is fullscreen |
+| `{:fullscreen :video}` | The browser can show only the video fullscreen, e.g. on an iPhone |
+| `{:refused :not-allowed}` | The call wasn't in a click handler, or the page may not, e.g. in an iframe without `allowfullscreen` |
+| `{:refused :no-metadata}` | On an iPhone, the video has no metadata yet |
+| `{:refused :not-supported}` | Neither can go fullscreen |
+
+With `:orientation`, e.g. `:landscape`, the answer also holds the answer
+of `lock-orientation!` as `:orientation`: `{:locked :landscape}`, or a
+refusal, e.g. `{:refused :not-supported}` on a desktop.
+
+### Options
+
+| Option | Of | Value |
+|---|---|---|
+| `:video` | Every function | The video element of the player, for the iPhone's fallback |
+| `:orientation` | `enter!` | The orientation to lock the screen in, e.g. `:landscape` or `:portrait` |
+
+
 ## Remote Playback
 
 The `remote-playback` namespace follows the
@@ -606,6 +648,23 @@ and `watch!` followed it in and out:
 
 The iOS simulator has no Picture-in-Picture either: it refuses every video
 with NotSupportedError, although an iPhone has it.
+
+### Fullscreen
+
+Tried on 15 October 2026 through Playwright, and in the iOS simulator:
+
+| | Chrome | Firefox | WebKit | Safari on iOS |
+|---|---|---|---|---|
+| `requestFullscreen` of an element | Yes | Yes | Yes | No |
+| `webkitEnterFullscreen` of a video | No | No | Yes | Yes |
+| Without a click | TypeError, or sometimes enters soon after leaving | TypeError, or sometimes enters soon after leaving | TypeError, or enters early in a page's life | InvalidStateError, thrown |
+| `screen.orientation.lock` outside fullscreen | NotSupportedError | SecurityError | None | None |
+
+With a tap in the iOS simulator, `enter!` showed the video in the
+system's player, with `webkitbeginfullscreen`. A video that hadn't played
+then couldn't leave it: `webkitExitFullscreen` changed nothing, and no
+`webkitendfullscreen` came. A video that started playing in the same tap
+left it at once, with `webkitendfullscreen`.
 
 ### Remote Playback
 

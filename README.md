@@ -240,6 +240,29 @@ Chrome on a desktop also has a Picture-in-Picture button in its media
 controls, which calls the session's `:enterpictureinpicture` handler,
 e.g. `(fn [_] (pip/enter! video))`.
 
+Fullscreen
+----------
+
+On an iPhone, only a video element itself can go fullscreen, in the
+system's own player, rather than a player of your own. The `fullscreen`
+namespace puts your player fullscreen where it can, and falls back to
+the video where it can't:
+
+```clojure
+(require '[dk.simongray.play-nice.fullscreen :as fullscreen])
+
+;; in a click handler
+(-> (fullscreen/enter! player {:video video :orientation :landscape})
+    (.then prn))
+;; prints {:fullscreen :element :orientation {:refused :not-supported}}
+;; on a desktop, which can't lock its screen, {:fullscreen :video …} on an
+;; iPhone, or e.g. {:refused :not-allowed}
+```
+
+On an iPhone, start the video in the same tap, since a video that has
+never played can't leave the system's player again, at least in the iOS
+simulator.
+
 Casting and AirPlay
 ------------------
 

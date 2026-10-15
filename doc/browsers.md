@@ -175,6 +175,20 @@ called it counts only while it's handled. Only a video without its
 metadata waits for it first, as Media Chrome does.
 
 
+## The iPhone's fullscreen is the video's
+
+An iPhone has no fullscreen of an element, only of a video, in the
+system's own player. So `enter!` tries the element first and falls back
+to the video, and its answer says which went fullscreen, since a player
+of your own isn't shown in the system's.
+
+The system's player also fails in a way of its own: a video that has
+never played enters it, but in the iOS simulator it can't leave it
+again, most likely since iOS loads no media before a video plays. So
+`exit!` answers with the state it actually left, rather than with false,
+and the docs say to start the video in the tap that enters.
+
+
 ## Casting in two vocabularies
 
 Remote Playback names the refusals of its picker in a way of its own:
