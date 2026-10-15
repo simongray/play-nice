@@ -473,6 +473,31 @@ What `watch!` passes on, at each enter, resize of the window and leave:
 | `:width`, `:height` | The size of the window in pixels, while it's in it |
 
 
+## Autoplay in view
+
+The `viewport` namespace follows the
+[Intersection Observer](https://www.w3.org/TR/intersection-observer/)
+Working Draft.
+
+What `autoplay!` passes on:
+
+| Key | Value |
+|---|---|
+| `:visible` | Whether at least the threshold of the video shows |
+| `:playing` | Whether the video plays |
+| `:held` | `:visitor` once the visitor has paused it, or `:reduced-motion` where the user prefers reduced motion, and left out otherwise |
+| `:refused` | The refusal of the last play, e.g. `:not-allowed`, and left out otherwise |
+
+| Option | Value |
+|---|---|
+| `:threshold` | The share of the video that must show for it to play, 0.5 by default |
+| `:reduced-motion` | Whether to hold the video, by default as `reduced-motion?` says the user prefers |
+
+The video plays as `media/play!` with `:muted-fallback` plays it, and
+pauses out of view only while it's muted. A video that ends doesn't
+count as paused by the visitor.
+
+
 ## Fullscreen
 
 The `fullscreen` namespace follows the

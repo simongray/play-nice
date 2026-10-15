@@ -188,6 +188,18 @@ default. The edges of the letters are text shadows, the one way to draw
 them that `::cue` allows.
 
 
+## Autoplay in view, as the engines do it
+
+By their autoplay policies, Chrome and WebKit on iOS pause a muted video
+with the autoplay attribute when it scrolls out of view, and play it
+again when it returns, but they leave alone a video that a page plays
+itself. So `autoplay!` follows the
+same rule for any video, in every engine. It pauses only a muted video,
+as they do, so that a video with sound plays on below the fold. And it
+gives way to the visitor: a pause it didn't make itself is theirs, after
+which it neither plays nor pauses the video again.
+
+
 ## The iPhone's fullscreen is the video's
 
 An iPhone has no fullscreen of an element, only of a video, in the

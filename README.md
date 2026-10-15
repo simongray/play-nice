@@ -252,6 +252,23 @@ Chrome on a desktop also has a Picture-in-Picture button in its media
 controls, which calls the session's `:enterpictureinpicture` handler,
 e.g. `(fn [_] (pip/enter! video))`.
 
+Autoplay in view
+----------------
+
+For a muted video that should play while it's in view, e.g. at the top
+of a page, `viewport/autoplay!` plays it while half of it shows, and
+pauses it when it scrolls away. It leaves the video alone once the
+visitor pauses it, and holds it where the user prefers reduced motion:
+
+```clojure
+(require '[dk.simongray.play-nice.viewport :as viewport])
+
+(def stop!
+  (viewport/autoplay! hero #(swap! page assoc :hero %)))
+;; :hero is e.g. {:visible true :playing true}, or {:visible true
+;; :playing false :held :visitor} once the visitor has paused it
+```
+
 Fullscreen
 ----------
 
