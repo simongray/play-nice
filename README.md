@@ -69,7 +69,7 @@ Add the latest release from
 your `deps.edn`:
 
 ```clojure
-dk.simongray/play-nice {:mvn/version "0.3.0"}
+dk.simongray/play-nice {:mvn/version "0.2.0"}
 ```
 
 For changes since the latest release, give a Git dependency with the SHA
