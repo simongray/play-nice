@@ -23,7 +23,9 @@
             [dk.simongray.play-nice.util.keys :as keys]))
 
 ;; RFC 7587 registers audio/opus for RTP, while an .opus file is Ogg, by
-;; RFC 7845; Chrome 155, Firefox 157 and WebKit 27.2 refuse each name below
+;; RFC 7845; on macOS, Chrome 155, Firefox 157 and WebKit 27.2 refuse each
+;; name below, while WebKit on Linux plays through GStreamer, which knows
+;; some of them
 (def type-aliases
   "The media types that engines don't know, by the type of the same format
   that they do, which decoding-info! asks about in their place."
