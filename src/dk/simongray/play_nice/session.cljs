@@ -87,8 +87,8 @@
 
 (defn element-state
   "The :playback-state and :position-state that the session shows for
-  `element`, a map of a media element's attributes. The position state
-  comes from `position-fn`, e.g. element-position.
+  `element`, a media element's state as media/state gives it. The position
+  state comes from `position-fn`, e.g. element-position.
 
   An element that failed counts as paused, since a fatal error leaves its
   paused attribute false."
@@ -323,15 +323,6 @@
      (set! (.-playbackState session) (name state))
      state)))
 
-(defn- element-attributes
-  "The attributes of the media `element` that a session follows."
-  [^js element]
-  {:duration      (.-duration element)
-   :current-time  (.-currentTime element)
-   :playback-rate (.-playbackRate element)
-   :paused        (.-paused element)
-   :error         (media/error element)})
-
 (defn element-actions
   "Handlers that play, pause, stop and seek the media `element` itself, by
   the `offsets` and with the `opts` below. The `offsets` give the seconds
@@ -359,7 +350,7 @@
                   (some-> (seek-position (cond-> details
                                            ignore-seek-offset
                                            (dissoc :seek-offset))
-                                         (element-attributes element)
+                                         (media/state element)
                                          offsets)
                           (go! fast-seek)))
          skips? (= :skips track-buttons)]
@@ -382,43 +373,41 @@
   "Keep the Media Session in step with the media `element`, with the `opts`
   above and below, and return a function that detaches it.
 
-  - :position-fn, a function from the element's :duration, :current-time,
-    :playback-rate, :paused and :error to its position state, e.g.
-    element-position. Without it, the position state stays clear, so that
-    the browser follows the element itself.
+  - :position-fn, a function from the element's state, as media/state
+    gives it, to its position state, e.g. element-position. Without it,
+    the position state stays clear, so that the browser follows the
+    element itself.
+  - :events, the events of the element to follow, by default
+    element-events
 
-  At each of element-events, the call sets the playback state and the
-  position state that element-state returns for the element. Detaching
-  stops that, clears the position state and declares the playback state
-  :none. Attaching another element detaches this one, since a page has
-  one session."
+  The call watches the element with media/watch!, and sets the playback
+  state and the position state that element-state returns for each new
+  state. Detaching stops that, clears the position state and declares the
+  playback state :none. Attaching another element detaches this one,
+  since a page has one session."
   ([element]
    (attach! element {}))
-  ([^js element {:keys [position-fn]
-                 :or   {position-fn (constantly nil)}
+  ([^js element {:keys [position-fn events]
+                 :or   {position-fn (constantly nil)
+                        events      element-events}
                  :as   opts}]
    (if-let [^js session (media-session opts)]
-     (let [st      (state session)
-           show!   (fn [{:keys [playback-state position-state]}]
-                     (playback-state! playback-state opts)
-                     (position! position-state opts))
-           follow! (fn [_]
-                     (->> (element-attributes element)
-                          (element-state position-fn)
-                          show!))
-           detach! (fn detach! []
-                     ;; unless another attachment took over since
-                     (when (identical? detach! (:detach @st))
-                       (doseq [event element-events]
-                         (.removeEventListener element event follow!))
-                       (show! {:playback-state :none})
-                       (swap! st dissoc :detach))
-                     nil)]
+     (let [st    (state session)
+           show! (fn [{:keys [playback-state position-state]}]
+                   (playback-state! playback-state opts)
+                   (position! position-state opts))]
        (when-let [previous (:detach @st)]
          (previous))
-       (doseq [event element-events]
-         (.addEventListener element event follow!))
-       (swap! st assoc :detach detach!)
-       (follow! nil)
-       detach!)
+       (let [stop!   (media/watch! element
+                                   (comp show! (partial element-state position-fn))
+                                   {:events events})
+             detach! (fn detach! []
+                       ;; unless another attachment took over since
+                       (when (identical? detach! (:detach @st))
+                         (stop!)
+                         (show! {:playback-state :none})
+                         (swap! st dissoc :detach))
+                       nil)]
+         (swap! st assoc :detach detach!)
+         detach!))
      (constantly nil))))

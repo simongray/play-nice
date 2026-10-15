@@ -142,7 +142,8 @@ counts an element with an error as paused.
 | Option | Of | Value |
 |---|---|---|
 | `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
-| `:position-fn` | `attach!` | A function from the element map to the position state, e.g. `element-position`. Without it, the position state stays clear. |
+| `:position-fn` | `attach!` | A function from the element's state, as `media/state` gives it, to the position state, e.g. `element-position`. Without it, the position state stays clear. |
+| `:events` | `attach!` | The events of the element to follow, `session/element-events` by default |
 | `:ignore-seek-offset` | `element-actions` | True to skip by the offsets even where the details have a `:seek-offset` |
 | `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the offsets give their seconds |
 
