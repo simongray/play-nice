@@ -260,14 +260,16 @@
    :cubic  {:volume #(* % % %) :level js/Math.cbrt}})
 
 (defn level
-  "The position of a volume slider for the media `element`, from 0 to 1,
-  with the `opts` below.
+  "The position of a volume slider, from 0 to 1, for `x`, the state of a
+  media element from state or watch!, or the element itself, with the
+  `opts` below, e.g. 0.5 for a :volume of 0.125 on the :cubic curve. A
+  view that renders the state needs no element.
 
   - :curve, one of curves, :linear by default"
-  ([element]
-   (level element {}))
-  ([^js element {:keys [curve] :or {curve :linear} :as opts}]
-   ((get-in curves [curve :level]) (.-volume element))))
+  ([x]
+   (level x {}))
+  ([^js x {:keys [curve] :or {curve :linear} :as opts}]
+   ((get-in curves [curve :level]) (if (map? x) (:volume x) (.-volume x)))))
 
 (defn volume!
   "Set the volume of the media `element` to the slider's `level`, from 0 to

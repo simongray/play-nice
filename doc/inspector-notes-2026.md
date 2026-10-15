@@ -7,15 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### A volume slider needs the level of a state, not of an element
-
-The bar renders from the state that `watch!` reports, as `seek-aria`
-expects, but `level` takes the element. So the view looks up the curve in
-`curves` and applies it to the state's `:volume` itself.
-
-- **Library:** let `level` take the state, or a volume, as `seek-aria`
-  takes the state.
-
 ### A seek bar needs the time under the pointer
 
 `seek-aria` and `seek-bar-keys` cover the slider's attributes and keys,
@@ -106,6 +97,9 @@ plays everywhere.
   `lang` of the page's `html` element, and then to the browser's. It's
   the page's rather than the seek bar's closest `lang`, since
   `seek-aria` gets the element's state, not the bar.
+- A volume slider needed the level of a state, but `level` took only
+  the element, so the inspector's view applied the curve from `curves`
+  itself. `level` now takes the state too, as `seek-aria` does.
 
 ## What worked as designed
 

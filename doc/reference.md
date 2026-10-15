@@ -159,8 +159,9 @@ volume on one of `curves`:
 | `:linear` | The level | The volume |
 | `:cubic` | The level cubed, e.g. 0.125 for 0.5 | The cube root |
 
-`level` returns the slider's level of an element's volume, on the
-`:curve` you give it. Where the
+`level` returns the slider's level of the volume of an element or of
+its state, on the `:curve` you give it, so a view that renders the state
+needs no element. Where the
 browser locks the volume, as an iPhone does, an element plays at the
 system's volume although its `volume` returns what the page set, as HTML
 allows. `volume-locked!` resolves to true there, from the `volumechange`
