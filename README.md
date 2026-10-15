@@ -269,6 +269,21 @@ visitor pauses it, and holds it where the user prefers reduced motion:
 ;; :playing false :held :visitor} once the visitor has paused it
 ```
 
+One player across tabs
+----------------------
+
+On a desktop, two tabs of the same app play at once, since no engine
+stops one tab's audio when another starts. `tabs/attach!` holds a Web
+Lock named for your app while the element plays, and pauses the element
+when another tab of the app takes the lock:
+
+```clojure
+(require '[dk.simongray.play-nice.tabs :as tabs])
+
+(def detach!
+  (tabs/attach! audio "my-podcast-app"))
+```
+
 Fullscreen
 ----------
 

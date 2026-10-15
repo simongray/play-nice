@@ -498,6 +498,20 @@ pauses out of view only while it's muted. A video that ends doesn't
 count as paused by the visitor.
 
 
+## One player across tabs
+
+The `tabs` namespace follows the
+[Web Locks API](https://www.w3.org/TR/web-locks/). `attach!` requests
+the lock of the name you give, with `steal`, when the element plays, and
+pauses the element when the lock is taken from it. It lets go of the
+lock when the element pauses and at `pagehide`, and takes it again when
+the page comes back from the back/forward cache still playing.
+
+| Option | Value |
+|---|---|
+| `:window` | The window whose navigator holds the locks, the page's by default |
+
+
 ## Fullscreen
 
 The `fullscreen` namespace follows the

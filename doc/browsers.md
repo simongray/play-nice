@@ -200,6 +200,15 @@ gives way to the visitor: a pause it didn't make itself is theirs, after
 which it neither plays nor pauses the video again.
 
 
+## One player across tabs, by a lock
+
+On a desktop, two tabs of the same app play at once and race to save
+the position. A Web Lock of the app's name, taken with `steal`, tells the
+tab that held it that another has started, so it can pause. The lock
+goes at every pause, and at `pagehide`, since a held lock keeps a page
+out of the back/forward cache.
+
+
 ## The iPhone's fullscreen is the video's
 
 An iPhone has no fullscreen of an element, only of a video, in the
