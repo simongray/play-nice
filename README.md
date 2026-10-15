@@ -32,6 +32,9 @@ and [the rules of autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/G
 - **Pure where it can be.** What needs no browser runs on the JVM too,
   and the rest can be tested with stand-ins.
 
+Some of what it does is [hard to find elsewhere](#hard-to-find-elsewhere),
+e.g. chapters in every browser, and fullscreen on an iPhone.
+
 
 An example
 ----------
@@ -212,8 +215,17 @@ in the vocabulary of
 (require '[dk.simongray.play-nice.media.captions :as captions]
          '[dk.simongray.play-nice.media.tracks :as tracks])
 
-(tracks/add! audio {:kind :chapters :cues (tracks/chapter-cues chapters 1830)})
+;; the chapters of an episode of 1830 seconds as a hidden track, whose
+;; active cue is the chapter that plays
+(tracks/add! audio {:kind :chapters
+                    :cues (tracks/chapter-cues [{:title "Intro" :start-time 0}
+                                                {:title "News" :start-time 95}]
+                                               1830)})
+
+;; a video's captions or subtitles in Danish, or else in English
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
+
+;; its captions in the user's style: larger, yellow, with a drop shadow
 (captions/style! video {:font-scale 1.5 :color :yellow :edge :drop-shadow})
 ```
 
