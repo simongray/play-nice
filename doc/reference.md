@@ -690,6 +690,27 @@ transient activation, and otherwise at the first of
 | `:window` | The window to ask and to listen at, e.g. a stand-in in a test. The page's by default. |
 
 
+## Schemas
+
+The `schema` namespace has a Malli schema for each of these maps:
+
+| Schema | The map |
+|---|---|
+| `media-state` | What `media/state` returns, with `ranges` and `media-error` |
+| `play-answer` | What `media/play!` answers |
+| `source` | What `media/source!` loads |
+| `media-effect` | An effect of `media/apply!` |
+| `metadata` | What `session/metadata!` shows, with `image` |
+| `position-state` | What `session/position!` shows |
+| `action-details` | What a handler of the Media Session gets |
+| `caption-style` | What `captions/css` takes |
+| `interval` | What `fragment/time` returns |
+| `fullscreen-state`, `picture-in-picture-state`, `remote-playback-state` | What the `watch!` of each passes on |
+
+The schemas name predicates as symbols, e.g. `'number?`, which Malli's
+default registry reads in Clojure and ClojureScript alike.
+
+
 ## Embedding
 
 The `embed` namespace follows the

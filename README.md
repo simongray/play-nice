@@ -50,9 +50,9 @@ dk.simongray/play-nice
 Since shadow-cljs only reads Git dependencies from `deps.edn`, set
 `:deps true` in your `shadow-cljs.edn` for that.
 
-The namespaces of pure functions, `fragment`, `captions`, `controls` and
-`embed`, also run on the JVM, e.g. to write a page on the server. Only
-`captions/style!` and `controls/listen!` need a browser.
+The namespaces of pure functions, `fragment`, `captions`, `controls`,
+`embed` and `schema`, also run on the JVM, e.g. to write a page on the
+server. Only `captions/style!` and `controls/listen!` need a browser.
 
 A player whose buttons just play, pause and seek the media element
 `audio` needs three calls:
@@ -459,6 +459,21 @@ explains. So where it says no or rejects a configuration, the answer also
 has canPlayType's, e.g. `{:supported false :smooth false :power-efficient
 false :can-play-type :maybe}`, and `playable?` accepts either. The
 promise never rejects.
+
+Schemas
+-------
+
+The `schema` namespace has the shapes of the maps as Malli schemas,
+written as plain data, so the library doesn't depend on Malli. Check a
+map with Malli of your own, e.g. in a test:
+
+```clojure
+(require '[malli.core :as m]
+         '[dk.simongray.play-nice.schema :as schema])
+
+(m/validate schema/media-effect [:seek 754])
+;; => true
+```
 
 Artwork
 -------
