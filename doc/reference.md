@@ -558,13 +558,22 @@ stream:
 | Before the metadata | InvalidStateError | InvalidStateError | InvalidStateError |
 | A video without a video track | InvalidStateError | InvalidStateError | InvalidStateError |
 | A video with `disablePictureInPicture` | InvalidStateError | InvalidStateError | NotSupportedError |
-| Without a click | NotAllowedError | Enters, early in a page's life, and NotAllowedError later | NotSupportedError at a page's first request, and NotAllowedError after |
+| Without a click | NotAllowedError | Enters, early in a page's life, and NotAllowedError later | NotSupportedError at a page's first request, and NotAllowedError after, from a WebKit without Picture-in-Picture |
 | `exitPictureInPicture` with no video in it | InvalidStateError | InvalidStateError | InvalidStateError |
 | leavepictureinpicture | Not seen | After `exitPictureInPicture` has resolved | Not seen |
 
-A real click may change the last rows, which only a person can make.
-The iOS simulator has no Picture-in-Picture: it refuses every video with
-NotSupportedError, although an iPhone has it.
+Playwright's WebKit has no Picture-in-Picture at all, since it can't show
+the window, even with a click. With a real click on the same day, in the
+browsers themselves, `enter!` put the video in Picture-in-Picture in each,
+and `watch!` followed it in and out:
+
+| | Chrome 153 | Firefox 158 | Safari 26.3 |
+|---|---|---|---|
+| The click | Through the accessibility API | Through the accessibility API | By hand |
+| The window | 311 by 175 | 320 by 180 | 360 by 202 |
+
+The iOS simulator has no Picture-in-Picture either: it refuses every video
+with NotSupportedError, although an iPhone has it.
 
 ### Safari on iOS
 

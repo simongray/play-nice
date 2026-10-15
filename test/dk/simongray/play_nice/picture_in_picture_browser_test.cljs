@@ -36,8 +36,8 @@
            (pip/enter! v)
            (fn [answer]
              (if-not (:width answer)
-               ;; Playwright's WebKit refuses the first request of a page
-               ;; with NotSupportedError, and the others with NotAllowedError
+               ;; Playwright's WebKit, which has no Picture-in-Picture,
+               ;; refuses the first request of a page with NotSupportedError
                (is (#{:not-allowed :not-supported} (:refused answer))
                    "without a click, which Chrome and WebKit refuse")
                ;; Playwright's Firefox, which lets a young page in without one
