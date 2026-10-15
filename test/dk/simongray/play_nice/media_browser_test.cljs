@@ -77,6 +77,17 @@
            (media/rate! v 1.75 {:preserves-pitch false})))
     (is (= [1.75 false] [(.-playbackRate v) (.-preservesPitch v)]))))
 
+(deftest the-volume
+  (let [^js v (muted-video)]
+    (is (= {:volume 0.125} (media/volume! v 0.5 {:curve :cubic})))
+    (is (= 0.125 (.-volume v)) "which an iPhone shows too, though it ignores it")
+    (is (< (abs (- 0.5 (media/level v :cubic))) 1e-9))
+    (run #(.then (media/volume-locked!)
+                 (fn [locked]
+                   (is (= (boolean (re-find #"iPhone" js/navigator.userAgent))
+                          locked)
+                       "only on an iPhone"))))))
+
 (deftest switching-the-source
   (let [^js v (muted-video)]
     (media/source! v {:src (silence) :position 0.5 :playback-rate 0.5})

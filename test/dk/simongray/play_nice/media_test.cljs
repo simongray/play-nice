@@ -165,6 +165,17 @@
            (media/rate! el 2 {:preserves-pitch false})))
     (is (false? (.-preservesPitch el)))))
 
+(deftest setting-the-volume
+  (let [^js el (element {})]
+    (is (= {:volume 0.5} (media/volume! el 0.5)))
+    (is (= {:volume 0.125} (media/volume! el 0.5 {:curve :cubic})))
+    (is (= 0.5 (media/level el :cubic)) "the slider's level back")
+    (is (= 0.125 (media/level el)))
+    (is (= {:volume 1} (media/volume! el 2)) "within 0 and 1")
+    (is (= {:volume 0} (media/volume! el -1)))
+    (is (= {:volume 0 :refused "loud"} (media/volume! el "loud"))
+        "the volume as it was")))
+
 (defn loader
   "A stand-in for a media element that adds the name of each attribute set
   to the atom `calls`, and resets the rate to the default at a new src, as

@@ -186,7 +186,11 @@ returns a function that stops it:
 ;;                  :duration 3600 :playback-rate 1.5 …}
 ```
 
-The [reference](doc/reference.md) describes the state and every answer.
+A volume slider sounds even along its length on the `:cubic` curve, e.g.
+`(media/volume! audio 0.5 {:curve :cubic})`. An iPhone ignores the
+volume a page sets, so hide the slider where `media/volume-locked!`
+resolves to true. The [reference](doc/reference.md) describes the state
+and every answer.
 
 Chapters and captions
 ---------------------

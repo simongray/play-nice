@@ -242,6 +242,62 @@
        (not= r x)              (assoc :refused x)
        (some? preserves-pitch) (assoc :preserves-pitch preserves-pitch)))))
 
+;; §4.8.11.13 says only that the range of volume "need not be linear"
+(def curves
+  "The curves from the position of a volume slider, from 0 to 1, to a
+  volume, and back: :linear, and :cubic, which sounds even along the
+  slider, as e.g. PulseAudio's does."
+  {:linear {:volume identity :level identity}
+   :cubic  {:volume #(* % % %) :level js/Math.cbrt}})
+
+(defn level
+  "The position of a volume slider for the media `element`, from 0 to 1,
+  on the `curve` of curves, :linear by default."
+  ([element]
+   (level element :linear))
+  ([^js element curve]
+   ((get-in curves [curve :level]) (.-volume element))))
+
+(defn volume!
+  "Set the volume of the media `element` to the slider's `level`, from 0 to
+  1, with the `opts` below, and return the volume as set, e.g. {:volume
+  0.125} for a level of 0.5 on the :cubic curve. The call keeps the level
+  within 0 and 1, and leaves the volume as it was for a level that isn't a
+  finite number, which it returns as :refused.
+
+  An iPhone plays every element at the system's volume, whatever the
+  page sets, which volume-locked! tells.
+
+  - :curve, one of curves, :linear by default"
+  ([element level]
+   (volume! element level {}))
+  ([^js element level {:keys [curve] :or {curve :linear} :as opts}]
+   (if-not (js/Number.isFinite level)
+     {:volume (.-volume element) :refused level}
+     (let [v ((get-in curves [curve :volume]) (max 0 (min 1 level)))]
+       (set! (.-volume element) v)
+       {:volume v}))))
+
+;; §4.8.11.13: a user agent's volume locked, which the volume attribute
+;; doesn't show, but WebKit on an iPhone fires no volumechange then
+(defn volume-locked!
+  "A promise of whether the browser locks the volume of media elements at
+  the system's, as an iPhone does, in which case a page's volume slider
+  does nothing, or of nil outside a browser. It never rejects.
+
+  The call sets the volume of an element of its own, which it never plays,
+  and waits half a second for the volumechange that a locked volume
+  doesn't fire."
+  []
+  (js/Promise.
+   (fn [resolve _]
+     (if-not (exists? js/document)
+       (resolve nil)
+       (let [^js probe (js/document.createElement "audio")]
+         (.addEventListener probe "volumechange" #(resolve false) #js {:once true})
+         (js/setTimeout #(resolve true) 500)
+         (set! (.-volume probe) 0.5))))))
+
 ;; §4.8.11.5, the load algorithm, and §4.8.11.6, the default playback
 ;; start position
 (defn source!

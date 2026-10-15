@@ -329,6 +329,22 @@ The map of `source!`:
 returns e.g. `{:playback-rate 16 :refused 20}` for a rate outside them. A
 rate that isn't finite leaves the rate as it was.
 
+### Volume
+
+`volume!` takes the level of a volume slider, from 0 to 1, and sets the
+volume on one of `curves`:
+
+| Curve | Volume of a level | Level of a volume |
+|---|---|---|
+| `:linear` | The level | The volume |
+| `:cubic` | The level cubed, e.g. 0.125 for 0.5 | The cube root |
+
+`level` returns the slider's level of an element's volume. Where the
+browser locks the volume, as an iPhone does, an element plays at the
+system's volume although its `volume` returns what the page set, as HTML
+allows. `volume-locked!` resolves to true there, from the `volumechange`
+that a locked volume doesn't fire.
+
 ### Options
 
 | Option | Of | Value |
@@ -827,8 +843,8 @@ A file with `#t=0.5`, over HTTP or as a blob URL, tried on 15 October
 Tried on 15 October 2026 in Safari on an iPhone 17 simulator with iOS
 26.3, where every browser test passes:
 
-- The volume is locked, so setting it changes nothing and fires no
-  volumechange.
+- The volume is locked: `volume` returns what the page set, but no
+  volumechange fires, and the element plays at the system's volume.
 - An element that hasn't played doesn't seek: seeked waits until it
   plays, although `currentTime` returns the new position at once. So a
   hidden track's active cues don't change either.
