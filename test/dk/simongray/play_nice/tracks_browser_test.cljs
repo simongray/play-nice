@@ -8,17 +8,37 @@
 
 (defn loaded
   "A promise that the last track element of the media `element` has
-  loaded."
+  loaded or failed to, at either of which add! adds its cues."
   [^js element]
-  (next-event (.-lastElementChild element) "load"))
+  (let [^js track (.-lastElementChild element)]
+    (js/Promise.race #js [(next-event track "load")
+                          (next-event track "error")])))
 
+(defn seek
+  "Seek the media `element` to `t` seconds, and return a promise that its
+  first text track's active cue has the `text`, or of a timeout after two
+  seconds. WebKit changes the active cues of a seek later than seeked."
+  [^js element t text]
+  (let [^js track (aget (.-textTracks element) 0)]
+    (js/Promise.
+     (fn [resolve _]
+       (let [check! (fn check! [_]
+                      (when (= text (some-> (.-activeCues track)
+                                            ^js (aget 0)
+                                            .-text))
+                        (.removeEventListener track "cuechange" check!)
+                        (resolve true)))]
+         (.addEventListener track "cuechange" check!)
+         (js/setTimeout #(resolve false) 2000)
+         (set! (.-currentTime element) t))))))
+
+;; seeks rather than playback, which a Linux engine in CI didn't finish
 (deftest following-the-chapters
   (let [^js v   (muted-video)
         states  (atom [])
         remove! (atom nil)
         stop!   (atom nil)
-        texts   (fn [] (keep (comp first (partial map :text) :active-cues first)
-                             @states))]
+        chapter (fn [] (-> @states last first :active-cues first :text))]
     (set! (.-src v) (silence))
     (run #(do (reset! stop! (tracks/watch! v (partial swap! states conj)))
               (reset! remove!
@@ -28,13 +48,13 @@
                                               [{:title "A" :start-time 0}
                                                {:title "B" :start-time 0.5}]
                                               1)}))
-              (loaded v))
+              (js/Promise.all #js [(loaded v)
+                                   (next-event v "loadedmetadata")]))
          #(is (= 2 (.-length (.-cues ^js (aget (.-textTracks v) 0)))))
-         #(let [ended (next-event v "ended")]
-            (.play v)
-            ended)
-         #(is (= ["A" "B"] (distinct (texts)))
-              "cuechange at each chapter, from a hidden track")
+         #(seek v 0.75 "B")
+         #(is (= "B" (chapter)) "cuechange at a chapter, from a hidden track")
+         #(seek v 0.25 "A")
+         #(is (= "A" (chapter)))
          #(is (= {:kind :chapters :label "Chapters" :mode :hidden}
                  (select-keys (first (last @states)) [:kind :label :mode])))
          #(let [removed (next-event (.-textTracks v) "removetrack")]

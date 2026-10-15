@@ -16,10 +16,13 @@
         (.finally done))))
 
 (defn next-event
-  "A promise of the next event named `event` at the `element`."
+  "A promise of the next event named `event` at the `element`. It rejects
+  after 10 seconds without one, so that a test fails rather than hangs,
+  and the browser's other tests still report."
   [^js element event]
-  (js/Promise. (fn [resolve _]
-                 (.addEventListener element event resolve #js {:once true}))))
+  (js/Promise. (fn [resolve reject]
+                 (.addEventListener element event resolve #js {:once true})
+                 (js/setTimeout #(reject (str "no " event " in 10 s")) 10000))))
 
 (defn silence
   "An object URL of a WAV file that holds a second of silence, as 8000

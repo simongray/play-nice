@@ -458,6 +458,7 @@ every rate within 1/16 and 16:
 | Cues added to a track element before it has loaded | Lost at the load | Kept | Lost at the load |
 | A track element without a src | Fails to load, but takes cues | Fails to load, but takes cues | Fails to load, but takes cues |
 | The last cue, at the end of the media | Stays active | Ends | Ends |
+| The active cues after a seek | Changed by seeked | Changed by seeked | Changed later, by a cuechange |
 | Removing the track element | Removes the track | Removes the track | Removes the track |
 
 `add!` adds its cues once the track element has loaded.
