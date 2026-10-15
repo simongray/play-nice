@@ -56,9 +56,14 @@
   last, e.g.
 
       (def stop!
-        (watch! video #(swap! app assoc :tracks %)))"
+        (watch! video #(swap! app assoc :tracks %)))
+
+  Where the element's tracks fire no events, e.g. in jsdom, the call does
+  nothing."
   [^js element f]
-  (if-let [^js tracks (.-textTracks element)]
+  (if-let [^js tracks (let [^js ts (.-textTracks element)]
+                        (when (fn? (some-> ts .-addEventListener))
+                          ts))]
     (let [events   ["addtrack" "removetrack" "change"]
           followed (js/Set.)
           shown    (atom nil)

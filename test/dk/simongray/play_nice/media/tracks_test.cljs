@@ -108,7 +108,9 @@
     (set! (.-activeCues ch) #js [])
     (.dispatchEvent ch (js/Event. "cuechange"))
     (is (= 3 (count @states)) "until it stops")
-    (is (nil? ((tracks/watch! #js {} identity))) "and nothing without tracks")))
+    (is (nil? ((tracks/watch! #js {} identity))) "and nothing without tracks")
+    (is (nil? ((tracks/watch! #js {:textTracks #js []} identity)))
+        "or with tracks that fire no events, as in jsdom")))
 
 (deftest adding-without-a-document
   (is (nil? ((tracks/add! #js {} {:kind :chapters :cues []})))))
