@@ -18,10 +18,9 @@ plays everywhere.
 
 - **podcast-clj:** `resolve/decoding-configuration` turns the feed's type
   into the content type, so it should write `audio/opus` as
-  `audio/ogg; codecs="opus"`.
-- **Library:** maybe `decoding-info!` should do the same for a type that
-  names a codec rather than a container, since a page of its own meets
-  the same type.
+  `audio/ogg; codecs="opus"`. play-nice's `decoding-info!` now does the
+  same, as Fixed says, but a user of podcast-clj may ask the browser
+  without it.
 
 ## Fixed
 
@@ -76,6 +75,12 @@ plays everywhere.
   WebVTT lets a cue end at Infinity, which Chrome and WebKit accept but
   Firefox 157 refuses, so `add!` writes it as the largest number, and
   `cues` reads that back as `##Inf`.
+- Every engine refused `audio/opus`, which feeds and servers write for
+  Ogg Opus. Asked about the types in the corpus, all three engines also
+  refused `audio/m4a`, Chrome and Firefox `audio/mpeg3`, and Firefox
+  `audio/x-mp3`, though they play those files. `decoding-info!` now asks
+  about each of these by the name that the engines know, from
+  `capabilities/type-aliases`.
 
 ## What worked as designed
 

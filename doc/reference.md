@@ -326,6 +326,15 @@ What `decoding-info!` returns:
 For a configuration of both audio and video, `:can-play-type` is the
 weaker of the two answers.
 
+`decoding-info!` asks about a content type of `type-aliases` by the name
+that the engines know for its format, since they refuse the alias:
+
+| Alias | Asked as |
+|---|---|
+| `audio/opus` | `audio/ogg; codecs="opus"`, since an `.opus` file is Ogg |
+| `audio/m4a` | `audio/mp4` |
+| `audio/mpeg3`, `audio/x-mp3` | `audio/mpeg` |
+
 
 ## Times in links
 
@@ -844,6 +853,9 @@ browser refuses an infinite duration.
 | `audio/mp4` without codecs | Not supported | TypeError | TypeError | Maybe |
 | `audio/mp4; codecs="mp4a.40.2"` | Supported | Supported | Supported | Probably |
 | `audio/ogg; codecs=opus` | Supported | Supported | Supported | Probably |
+| `audio/opus`, `audio/m4a` | Not supported | Not supported | Not supported | No |
+| `audio/mpeg3` | Not supported | TypeError | Not supported | Maybe in WebKit, else no |
+| `audio/x-mp3` | Supported | Not supported | Not supported | Probably in Chrome, maybe in WebKit, no in Firefox |
 | `audio/flac` | Supported | Supported | Not supported | Probably in Chrome, else maybe |
 | A video without its size | TypeError | TypeError | TypeError | Probably for H.264 |
 

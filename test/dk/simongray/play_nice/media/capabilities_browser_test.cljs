@@ -24,6 +24,16 @@
   (is (= :maybe (capabilities/can-play-type "audio/mp4")))
   (is (nil? (capabilities/can-play-type "audio/x-nonsense"))))
 
+(deftest the-names-that-engines-don't-know
+  (let [named #(hash-map :type :file :audio {:content-type %})
+        types ["audio/opus" "audio/m4a" "audio/mpeg3" "audio/x-mp3" "Audio/Opus "]]
+    (is (every? #(nil? (capabilities/can-play-type %)) ["audio/opus" "audio/m4a"])
+        "as the engines answer for the names themselves")
+    (run #(.then (capabilities/decoding-infos! (map named types))
+                 (fn [infos]
+                   (doseq [t types]
+                     (is (capabilities/playable? (infos (named t))) t)))))))
+
 (deftest the-files-that-apps-meet
   (run #(.then (capabilities/decoding-infos! [mp3 aac nonsense h264 mp3])
                (fn [infos]

@@ -14,8 +14,38 @@
     frame rate.
 
   So where it says no or rejects a configuration, the answer also has
-  canPlayType's, and playable? accepts either."
-  (:require [dk.simongray.play-nice.util.keys :as keys]))
+  canPlayType's, and playable? accepts either.
+
+  Servers and feeds also name some formats in ways that no engine knows,
+  e.g. audio/opus for an Ogg Opus file, so decoding-info! asks about the
+  name that the engines know of those in type-aliases."
+  (:require [clojure.string :as str]
+            [dk.simongray.play-nice.util.keys :as keys]))
+
+;; RFC 7587 registers audio/opus for RTP, while an .opus file is Ogg, by
+;; RFC 7845; Chrome 155, Firefox 157 and WebKit 27.2 refuse each name below
+(def type-aliases
+  "The media types that engines don't know, by the type of the same format
+  that they do, which decoding-info! asks about in their place."
+  {"audio/opus"  "audio/ogg; codecs=\"opus\""
+   "audio/m4a"   "audio/mp4"
+   "audio/mpeg3" "audio/mpeg"
+   "audio/x-mp3" "audio/mpeg"})
+
+(defn- known
+  "The `configuration` with the content types that type-aliases name in
+  the engines' own names."
+  [configuration]
+  (let [rename (fn [content-type]
+                 (get type-aliases
+                      (str/lower-case (str/trim (str content-type)))
+                      content-type))]
+    (cond-> configuration
+      (get-in configuration [:audio :content-type])
+      (update-in [:audio :content-type] rename)
+
+      (get-in configuration [:video :content-type])
+      (update-in [:video :content-type] rename))))
 
 (defn- content-types
   "The content types of the video and audio in the `configuration`."
@@ -52,9 +82,11 @@
        :can-play-type :maybe}
 
   For a configuration of both audio and video, :can-play-type is the
-  weaker of the two answers."
+  weaker of the two answers. A content type of type-aliases is asked
+  about by the engines' own name, e.g. audio/opus as Ogg Opus."
   [configuration]
-  (let [^js navigator   (.-navigator js/globalThis)
+  (let [configuration   (known configuration)
+        ^js navigator   (.-navigator js/globalThis)
         ^js capabilities (some-> navigator .-mediaCapabilities)
         asked           (if capabilities
                           (.decodingInfo capabilities (keys/->js configuration))
