@@ -47,6 +47,9 @@ jobs:
           clojure -M:cljs release test --config-merge '{:autorun false}'
           node target/node-tests.js
 
+      - name: JVM tests of the .cljc namespaces
+        run: clojure -X:test
+
       # The browser tests, compiled with advanced optimizations and no infer
       # warnings. They run in the runner's own Chrome, since Playwright's
       # Chromium can't play AAC or H.264, and in Playwright's Firefox and

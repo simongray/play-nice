@@ -505,7 +505,8 @@ What `seek-aria` returns:
 `value-text` writes the seconds with
 [Intl.DurationFormat](https://tc39.es/proposal-intl-duration-format/), in
 the locale you give or the browser's, e.g. "12 minutes, 30 seconds" or
-"12 minutter og 30 sekunder", and in English where it can't.
+"12 minutter og 30 sekunder", and in English where it can't, as on the
+JVM.
 
 
 ## Picture-in-Picture

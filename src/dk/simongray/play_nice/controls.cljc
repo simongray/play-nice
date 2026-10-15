@@ -14,9 +14,12 @@
       (session/actions! handlers)
 
       (def stop!
-        (listen! player audio handlers))"
+        (listen! player audio handlers))
+
+  Everything but listen! runs on the JVM too, e.g. to write a seek bar's
+  ARIA attributes into a page on the server."
   (:require [clojure.string :as str]
-            [dk.simongray.play-nice.media :as media]))
+            #?(:cljs [dk.simongray.play-nice.media :as media])))
 
 (defn play-or-pause
   "The details of the action that a play/pause key presses for a media
@@ -68,55 +71,65 @@
    "End"        (fn [{:keys [duration]}]
                   {:action :seekto :seek-time duration})})
 
-(defn- foreign?
-  "Whether the keydown `e` belongs to something other than the shortcuts:
-  a key with Alt, Ctrl or Meta, one that a handler took already, typing in
-  a field, or a space that presses a button."
-  [^js e]
-  (let [^js target (.-target e)
-        matches?   #(and (fn? (.-matches target)) (.matches target %))]
-    (boolean (or (.-defaultPrevented e)
-                 (.-altKey e)
-                 (.-ctrlKey e)
-                 (.-metaKey e)
-                 (.-isContentEditable target)
-                 (matches? "input, textarea, select")
-                 (and (= " " (.-key e))
-                      (matches? "button, summary, [role=button]"))))))
+#?(:cljs
+   (defn- foreign?
+     "Whether the keydown `e` belongs to something other than the shortcuts:
+     a key with Alt, Ctrl or Meta, one that a handler took already, typing
+     in a field, or a space that presses a button."
+     [^js e]
+     (let [^js target (.-target e)
+           matches?   #(and (fn? (.-matches target)) (.matches target %))]
+       (boolean (or (.-defaultPrevented e)
+                    (.-altKey e)
+                    (.-ctrlKey e)
+                    (.-metaKey e)
+                    (.-isContentEditable target)
+                    (matches? "input, textarea, select")
+                    (and (= " " (.-key e))
+                         (matches? "button, summary, [role=button]")))))))
 
-(defn listen!
-  "Call the `handlers` at the keys pressed while the focus is in `scope`,
-  for the media `element`, and return a function that stops it. The
-  `keymap` is player-keys by default, or e.g. seek-bar-keys for a seek bar
-  of its own.
+#?(:cljs
+   (defn listen!
+     "Call the `handlers` at the keys pressed while the focus is in `scope`,
+     for the media `element`, and return a function that stops it. The
+     `keymap` is player-keys by default, or e.g. seek-bar-keys for a seek
+     bar of its own.
 
-  A handler gets the details of its action, as from the lock screen, e.g.
-  {:action :seekforward}, and the browser does nothing else for that key,
-  e.g. scroll at the space bar. The call leaves alone the keys that
-  belong to something else, i.e. those with Alt, Ctrl or Meta, those that
-  a handler took already, typing in a field, and a space that presses a
-  button. Holding a key down repeats only a seek."
-  ([scope element handlers]
-   (listen! scope element handlers player-keys))
-  ([^js scope ^js element handlers keymap]
-   (if (fn? (some-> scope .-addEventListener))
-     (let [seeks  #{:seekbackward :seekforward :seekto}
-           press! (fn [^js e]
-                    (when-let [v (and (not (foreign? e))
-                                      (get keymap (.-key e)))]
-                      (let [details (if (keyword? v)
-                                      {:action v}
-                                      (v (media/state element)))
-                            action  (:action details)
-                            f       (get handlers action)]
-                        (when (and f (or (not (.-repeat e)) (seeks action)))
-                          (.preventDefault e)
-                          (f details)))))]
-       (.addEventListener scope "keydown" press!)
-       (fn []
-         (.removeEventListener scope "keydown" press!)
-         nil))
-     (constantly nil))))
+     A handler gets the details of its action, as from the lock screen,
+     e.g. {:action :seekforward}, and the browser does nothing else for
+     that key, e.g. scroll at the space bar. The call leaves alone the keys
+     that belong to something else, i.e. those with Alt, Ctrl or Meta,
+     those that a handler took already, typing in a field, and a space that
+     presses a button. Holding a key down repeats only a seek."
+     ([scope element handlers]
+      (listen! scope element handlers player-keys))
+     ([^js scope ^js element handlers keymap]
+      (if (fn? (some-> scope .-addEventListener))
+        (let [seeks  #{:seekbackward :seekforward :seekto}
+              press! (fn [^js e]
+                       (when-let [v (and (not (foreign? e))
+                                         (get keymap (.-key e)))]
+                         (let [details (if (keyword? v)
+                                         {:action v}
+                                         (v (media/state element)))
+                               action  (:action details)
+                               f       (get handlers action)]
+                           (when (and f (or (not (.-repeat e)) (seeks action)))
+                             (.preventDefault e)
+                             (f details)))))]
+          (.addEventListener scope "keydown" press!)
+          (fn []
+            (.removeEventListener scope "keydown" press!)
+            nil))
+        (constantly nil)))))
+
+(defn- whole
+  "The whole seconds of `x`, rounded down, or nil where `x` isn't a finite
+  number."
+  [x]
+  (when #?(:clj  (and (number? x) (Double/isFinite (double x)))
+           :cljs (js/Number.isFinite x))
+    (long (Math/floor (double x)))))
 
 (defn- english
   "The `parts` of a duration, a map of its :hours, :minutes and :seconds,
@@ -135,25 +148,24 @@
   "The `seconds` in words for a screen reader, e.g. \"12 minutes, 30
   seconds\" for 750, in the `locale`, by default the browser's, e.g.
   \"12 minutter og 30 sekunder\" in \"da\". Where the browser has no
-  Intl.DurationFormat, the words are English."
+  Intl.DurationFormat, and on the JVM, the words are English."
   ([seconds]
    (value-text seconds nil))
-  ([seconds locale]
-   (let [s     (if (js/Number.isFinite seconds)
-                 (js/Math.floor (max 0 seconds))
-                 0)
+  ;; the JVM has no DurationFormat, so English is all it writes
+  ([seconds #_{:clj-kondo/ignore [:unused-binding]} locale]
+   (let [s     (max 0 (or (whole seconds) 0))
          parts {:hours   (quot s 3600)
                 :minutes (quot (mod s 3600) 60)
                 :seconds (mod s 60)}]
-     (try
-       (.format (js/Intl.DurationFormat. (or locale js/undefined)
-                                         #js {:style          "long"
-                                              :secondsDisplay (if (zero? s)
-                                                                "always"
-                                                                "auto")})
-                (clj->js parts))
-       (catch :default _
-         (english parts))))))
+     #?(:clj  (english parts)
+        :cljs (try
+                (.format (js/Intl.DurationFormat.
+                          (or locale js/undefined)
+                          #js {:style          "long"
+                               :secondsDisplay (if (zero? s) "always" "auto")})
+                         (clj->js parts))
+                (catch :default _
+                  (english parts)))))))
 
 ;; WAI-ARIA 1.2, the slider role
 (defn seek-aria
@@ -172,12 +184,9 @@
   ([state]
    (seek-aria state nil))
   ([{:keys [current-time duration] :as state} locale]
-   (let [now (if (js/Number.isFinite current-time)
-               (js/Math.floor current-time)
-               0)]
+   (let [now (or (whole current-time) 0)]
      (cond-> {:role           "slider"
               :aria-valuemin  0
               :aria-valuenow  now
               :aria-valuetext (value-text now locale)}
-       (js/Number.isFinite duration)
-       (assoc :aria-valuemax (js/Math.floor duration))))))
+       (whole duration) (assoc :aria-valuemax (whole duration))))))

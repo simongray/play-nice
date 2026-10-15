@@ -23,7 +23,8 @@
 
   Chrome 153 on macOS kept its own background behind the text, and its own
   letters for :small-capitals, whatever the page asked for, but applied the
-  rest."
+  rest. Everything but style! runs on the JVM too, e.g. to write the CSS
+  into a page on the server."
   (:require [clojure.string :as str]))
 
 ;; 47 CFR 79.103(c)(2) and (6): a palette of at least these eight colours
@@ -64,6 +65,15 @@
    :uniform     #(str/join "," (repeat 4 (str "0 0 2px " %)))
    :drop-shadow #(str "2px 2px 3px " %)})
 
+(defn- channel
+  "The value of the two hex digits at `i` in `hex`, or NaN where there
+  aren't two, as parseInt answers in JavaScript."
+  [hex i]
+  (let [s (subs hex (min i (count hex)) (min (+ i 2) (count hex)))]
+    #?(:clj  (try (Integer/parseInt s 16)
+                  (catch NumberFormatException _ ##NaN))
+       :cljs (js/parseInt s 16))))
+
 (defn rgba
   "The CSS colour of `color`, one of colors or a hex code, e.g. \"#ffcc00\"
   or \"#fc0\", at the `opacity`, from 0 to 1, e.g. \"rgba(255,204,0,1)\"."
@@ -73,7 +83,7 @@
               (str/join (mapcat #(repeat 2 %) hex))
               hex)
         rgb (or (colors color)
-                (mapv #(js/parseInt (subs hex % (+ % 2)) 16) [0 2 4]))]
+                (mapv (partial channel hex) [0 2 4]))]
     (str "rgba(" (str/join "," rgb) "," opacity ")")))
 
 (defn declarations
@@ -87,7 +97,7 @@
     (conj ["color" (rgba (or color :white) (or opacity 1))])
 
     font-scale
-    (conj ["font-size" (str (js/Math.round (* 100 font-scale)) "%")])
+    (conj ["font-size" (str (Math/round (double (* 100 font-scale))) "%")])
 
     (fonts font)
     (conj ["font-family" (fonts font)])
@@ -118,28 +128,30 @@
                            (declarations style)))
         "}")))
 
-(defonce ^{:no-doc true
-           :doc    "The number of the last video that style! styled."}
-  styled
-  (atom 0))
+#?(:cljs
+   (defonce ^{:no-doc true
+              :doc    "The number of the last video that style! styled."}
+     styled
+     (atom 0)))
 
-(defn style!
-  "Style the captions of the `video` in the `style`, and return a function
-  that removes the style again.
+#?(:cljs
+   (defn style!
+     "Style the captions of the `video` in the `style`, and return a function
+     that removes the style again.
 
-  The call adds the CSS of css to the video's document, for this video
-  alone. A later call for the same video replaces its style."
-  [^js video style]
-  (if-let [^js document (.-ownerDocument video)]
-    (let [^js element (.createElement document "style")
-          id          (str (swap! styled inc))]
-      (.setAttribute video "data-play-nice-captions" id)
-      (set! (.-textContent element)
-            (css style (str "video[data-play-nice-captions=\"" id "\"]")))
-      (.appendChild (or (.-head document) (.-documentElement document)) element)
-      (fn []
-        (.remove element)
-        (when (= id (.getAttribute video "data-play-nice-captions"))
-          (.removeAttribute video "data-play-nice-captions"))
-        nil))
-    (constantly nil)))
+     The call adds the CSS of css to the video's document, for this video
+     alone. A later call for the same video replaces its style."
+     [^js video style]
+     (if-let [^js document (.-ownerDocument video)]
+       (let [^js element (.createElement document "style")
+             id          (str (swap! styled inc))]
+         (.setAttribute video "data-play-nice-captions" id)
+         (set! (.-textContent element)
+               (css style (str "video[data-play-nice-captions=\"" id "\"]")))
+         (.appendChild (or (.-head document) (.-documentElement document)) element)
+         (fn []
+           (.remove element)
+           (when (= id (.getAttribute video "data-play-nice-captions"))
+             (.removeAttribute video "data-play-nice-captions"))
+           nil))
+       (constantly nil))))

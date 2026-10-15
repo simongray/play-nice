@@ -103,6 +103,18 @@
     ((get (apply session/element-actions el args) (:action details)) details)
     (.-currentTime el)))
 
+(deftest clips
+  (let [element {:current-time 103 :duration 3600 :playback-rate 1.5}]
+    (is (= {:duration 60 :playback-rate 1.5 :position 30}
+           (session/clip-position {:start 73 :end 133} element)))
+    (is (= {:duration 3527 :playback-rate 1.5 :position 30}
+           (session/clip-position {:start 73} element))
+        "to the end of the file")
+    (is (= 0 (:position (session/clip-position {:start 200 :end 260} element)))
+        "before the clip")
+    (is (nil? (session/clip-position {:start 73} (assoc element :duration nil)))
+        "while the duration is unknown")))
+
 (deftest the-buttons-of-an-element
   (let [offsets {:seekbackward 15 :seekforward 30}
         skips   {:track-buttons :skips}]

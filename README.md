@@ -50,6 +50,10 @@ dk.simongray/play-nice
 Since shadow-cljs only reads Git dependencies from `deps.edn`, set
 `:deps true` in your `shadow-cljs.edn` for that.
 
+The namespaces of pure functions, `fragment`, `captions`, `controls` and
+`embed`, also run on the JVM, e.g. to write a page on the server. Only
+`captions/style!` and `controls/listen!` need a browser.
+
 A player whose buttons just play, pause and seek the media element
 `audio` needs three calls:
 
@@ -485,6 +489,7 @@ Development
 npm install                            # once, for the tests
 npx playwright install firefox webkit  # once, for the browsers
 clojure -M:cljs compile test           # the tests in Node
+clojure -X:test                        # the .cljc tests on the JVM
 clojure -M:cljs release browser-test   # the tests for a browser
 node test/browsers.mjs                 # in Chrome, Firefox and WebKit
 node test/simulator.mjs                # in Safari on an iOS simulator

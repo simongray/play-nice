@@ -12,6 +12,12 @@
                        thheller/shadow-cljs {:mvn/version "3.5.3"}}
          :main-opts   ["-m" "shadow.cljs.devtools.cli"]}
 
+  ;; clojure -X:test  (the tests of the .cljc namespaces on the JVM)
+  :test {:extra-paths ["test"]
+         :extra-deps  {io.github.cognitect-labs/test-runner
+                       {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+         :exec-fn     cognitect.test-runner.api/test}
+
   ;; clojure -T:build jar | install | deploy  (see build.clj)
   :build {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
                        slipset/deps-deploy            {:mvn/version "0.2.5"}}

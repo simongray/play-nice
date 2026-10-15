@@ -5,9 +5,17 @@
   A media fragment addresses the file, which every engine starts at the
   fragment's start. A page's t is a convention of its own, e.g. for the
   key moments of a video in Google's search, and must stay off the URL of
-  the file itself, since podcast hosts count it as another file."
+  the file itself, since podcast hosts count it as another file.
+
+  The times are numbers of seconds, which are doubles on the JVM."
   (:refer-clojure :exclude [time])
   (:require [clojure.string :as str]))
+
+(defn- number
+  "The number that the decimal digits `s` write, e.g. 73.5 for \"73.5\"."
+  [s]
+  #?(:clj  (Double/parseDouble s)
+     :cljs (js/parseFloat s)))
 
 ;; W3C Media Fragments URI 1.0 (basic), §4.2.1, Normal Play Time
 (defn npt
@@ -18,9 +26,9 @@
   (when-let [[_ h m sec] (re-matches #"(?:(?:(\d+):)?([0-5]\d):)?(\d+(?:\.\d*)?)"
                                      (str s))]
     (when (or (nil? m) (re-matches #"[0-5]\d(?:\.\d*)?" sec))
-      (+ (* 3600 (js/parseInt (or h "0") 10))
-         (* 60 (js/parseInt (or m "0") 10))
-         (js/parseFloat sec)))))
+      (+ (* 3600 (number (or h "0")))
+         (* 60 (number (or m "0")))
+         (number sec)))))
 
 (defn interval
   "The interval of the value `s` of a t, a map of its :start and :end in
@@ -30,7 +38,7 @@
   [s]
   (let [s (str/replace (str s) #"^npt:" "")]
     (when-let [[_ start end] (re-matches #"([^,]*)(?:,(.*))?" s)]
-      (let [start* (if (str/blank? start) 0 (npt start))
+      (let [start* (if (str/blank? start) 0.0 (npt start))
             end*   (when end (npt end))]
         (when (and start*
                    (or (nil? end) end*)
@@ -39,6 +47,13 @@
           (cond-> {:start start*}
             end* (assoc :end end*)))))))
 
+;; URLDecoder reads + as a space, which decodeURIComponent doesn't
+(defn- decode
+  "The percent-decoded `s`, which throws where `s` doesn't decode."
+  [s]
+  #?(:clj  (java.net.URLDecoder/decode (str/replace s "+" "%2B") "UTF-8")
+     :cljs (js/decodeURIComponent s)))
+
 (defn- pairs
   "The name-value pairs of the fragment or query `s`, percent-decoded, as
   the spec's §5.1.1 parses them, leaving out the pairs that don't decode."
@@ -46,8 +61,8 @@
   (keep (fn [pair]
           (let [[name value] (str/split pair #"=" 2)]
             (try
-              [(js/decodeURIComponent name) (js/decodeURIComponent (or value ""))]
-              (catch :default _ nil))))
+              [(decode name) (decode (or value ""))]
+              (catch #?(:clj Exception :cljs :default) _ nil))))
         (str/split (str s) #"&")))
 
 ;; §5.1.2: the last valid occurrence of a dimension is the one that counts
@@ -74,7 +89,7 @@
       (if-let [[_ h m s] (re-matches #"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s?)?"
                                      value)]
         (when-not (str/blank? value)
-          (+ (* 3600 (js/parseInt (or h "0") 10))
-             (* 60 (js/parseInt (or m "0") 10))
-             (js/parseFloat (or s "0"))))
+          (+ (* 3600 (number (or h "0")))
+             (* 60 (number (or m "0")))
+             (number (or s "0"))))
         (npt value)))))
