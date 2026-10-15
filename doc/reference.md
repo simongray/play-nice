@@ -145,15 +145,16 @@ and counts an element with an error as paused.
 | `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
 | `:position-fn` | `attach!` | A function from the element's state, as `media/state` gives it, to the position state, e.g. `element-position`. Without it, the position state stays clear. |
 | `:events` | `attach!` | The events of the element to follow, `session/element-events` by default |
-| `:ignore-seek-offset` | `element-actions` | True to skip by the offsets even where the details have a `:seek-offset` |
-| `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the offsets give their seconds |
+| `:seekbackward`, `:seekforward` | `element-actions` | The seconds of each skip, e.g. 15 and 30. A skip without them is left out. |
+| `:ignore-seek-offset` | `element-actions` | True to skip by those seconds even where the details have a `:seek-offset` |
+| `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the skips have their seconds |
 
-The offsets of `element-actions` are a map of the seconds of each skip,
-e.g. `{:seekbackward 15 :seekforward 30}`.
+The `:stop` of `element-actions` pauses the element where it is, as
+Media3's `Player.stop` keeps the position.
 
 ### Support
 
-`support` returns nil where the browser has no Media Session, and else a
+`support!` returns nil where the browser has no Media Session, and else a
 map:
 
 | Key | Value |
@@ -322,11 +323,11 @@ What `apply!` does for each effect, and its answer:
 | Effect | Does | Answer |
 |---|---|---|
 | `[:play opts]` | `play!` | As `play!` |
-| `[:pause]` | Pauses the element | `{:paused true}` |
-| `[:seek position]` | `seek!` | E.g. `{:current-time 754}`, or `{:current-time 12 :refused ##Inf}` for a position that isn't finite, where the element would throw |
+| `[:pause]` | `pause!` | `{:paused true}` |
+| `[:seek position]` | `seek!` | E.g. `{:current-time 754}`, or `{:current-time 12 :refused :not-finite}` for a position that isn't finite, where the element would throw |
 | `[:rate x opts]` | `rate!` | As `rate!` |
 | `[:volume level opts]` | `volume!` | As `volume!` |
-| `[:muted muted?]` | Mutes or unmutes it | E.g. `{:muted true}` |
+| `[:muted muted?]` | `muted!` | E.g. `{:muted true}` |
 | `[:source m]` | `source!` | As `source!` |
 | `[:switch-source src]` | `switch-source!` | As `switch-source!` |
 | Any other | Nothing | `{:refused :unknown-effect}` |
@@ -348,8 +349,11 @@ The map of `source!`:
 ### Rates
 
 `rate!` keeps the rate within 1/16 and 16, which every engine plays, and
-returns e.g. `{:playback-rate 16 :refused 20}` for a rate outside them. A
-rate that isn't finite leaves the rate as it was.
+returns the rate you asked for as `:requested` where it had to change
+it, e.g. `{:playback-rate 16 :requested 20}`. A rate that isn't a finite
+number leaves the rate as it was, and answers e.g. `{:playback-rate 1.5
+:refused :not-finite}`. `volume!` and `seek!` answer in the same way, so
+`:refused` is always a keyword that names the reason.
 
 ### Volume
 
@@ -361,7 +365,8 @@ volume on one of `curves`:
 | `:linear` | The level | The volume |
 | `:cubic` | The level cubed, e.g. 0.125 for 0.5 | The cube root |
 
-`level` returns the slider's level of an element's volume. Where the
+`level` returns the slider's level of an element's volume, on the
+`:curve` you give it. Where the
 browser locks the volume, as an iPhone does, an element plays at the
 system's volume although its `volume` returns what the page set, as HTML
 allows. `volume-locked!` resolves to true there, from the `volumechange`
@@ -371,9 +376,10 @@ that a locked volume doesn't fire.
 
 | Option | Of | Value |
 |---|---|---|
-| `:events` | `watch!` | The events to read the state at, `media/events` by default, which leaves out `timeupdate` |
+| `:events` | `watch!` | The events to read the state at, as keywords, `media/events` by default, which leaves out `:timeupdate` |
 | `:muted-fallback` | `play!` | True to play muted where the browser refuses the sound |
 | `:preserves-pitch` | `rate!` | False to let the pitch follow the rate |
+| `:curve` | `volume!`, `level` | One of `curves`, `:linear` by default |
 
 
 ## Text tracks
@@ -467,7 +473,9 @@ and the APG's
 
 A keymap is a map from a key, as the `key` of a KeyboardEvent names it,
 to an action, or to a function from the element's state to the details
-of the action. `listen!` takes `player-keys` by default:
+of the action, which may be one of your own, e.g. `{"f" :fullscreen}`
+with a `:fullscreen` handler. `listen!` takes `player-keys` unless you
+give it a `:keymap`:
 
 | Keys | Action |
 |---|---|
@@ -522,7 +530,7 @@ What the promise of `enter!` resolves to:
 
 | Answer | When |
 |---|---|
-| `{:width 320 :height 180}` | The video is in Picture-in-Picture, in a window of that size |
+| `{:picture-in-picture true :width 320 :height 180}` | The video is in Picture-in-Picture, in a window of that size |
 | `{:refused :not-allowed}` | The call wasn't in a click handler, or the page may not use it, from NotAllowedError or SecurityError |
 | `{:refused :not-supported}` | The browser has no Picture-in-Picture for it, e.g. for an audio element |
 | `{:refused :disabled}` | The video has `disablePictureInPicture` |
@@ -533,7 +541,8 @@ video that isn't in Picture-in-Picture.
 
 ### State
 
-What `watch!` passes on, at each enter, resize of the window and leave:
+What `watch!` passes on, at each enter, resize of the window and leave,
+and `state` returns without the size:
 
 | Key | Value |
 |---|---|
@@ -645,7 +654,8 @@ Recommendation Draft of 30 April 2024, and WebKit's AirPlay events.
 
 ### State
 
-What `watch!` passes on:
+What `watch!` passes on, and `state` returns, with the availability as
+`:unknown` where the browser has Remote Playback:
 
 | Key | Value |
 |---|---|

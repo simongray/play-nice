@@ -45,9 +45,9 @@
                     (when-not (:picture-in-picture (last @states))
                       (next-event v "enterpictureinpicture")))
                    (.then (fn [_]
-                            (is (pip/in-picture-in-picture? v))
-                            (is (= (assoc answer :picture-in-picture true)
-                                   (last @states)))
+                            (is (:picture-in-picture (pip/state v)))
+                            (is (= answer (last @states))
+                                "the answer, as watch! has it")
                             (let [left (next-event v "leavepictureinpicture")]
                               (.then (pip/exit! v) (fn [_] left)))))))))
          #(is (= {:picture-in-picture false} (last @states)))

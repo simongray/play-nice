@@ -91,19 +91,24 @@
 #?(:cljs
    (defn listen!
      "Call the `handlers` at the keys pressed while the focus is in `scope`,
-     for the media `element`, and return a function that stops it. The
-     `keymap` is player-keys by default, or e.g. seek-bar-keys for a seek
-     bar of its own.
+     for the media `element`, with the `opts` below, and return a function
+     that stops it.
 
      A handler gets the details of its action, as from the lock screen,
      e.g. {:action :seekforward}, and the browser does nothing else for
      that key, e.g. scroll at the space bar. The call leaves alone the keys
      that belong to something else, i.e. those with Alt, Ctrl or Meta,
      those that a handler took already, typing in a field, and a space that
-     presses a button. Holding a key down repeats only a seek."
+     presses a button. Holding a key down repeats only a seek.
+
+     - :keymap, a map from each key to an action, or to a function from
+       the element's state to the details of one, player-keys by default,
+       or e.g. seek-bar-keys for a seek bar of its own. An action needs
+       a handler of the same name, and may be one of your own, e.g.
+       {\"f\" :fullscreen} with a :fullscreen handler."
      ([scope element handlers]
-      (listen! scope element handlers player-keys))
-     ([^js scope ^js element handlers keymap]
+      (listen! scope element handlers {}))
+     ([^js scope ^js element handlers {:keys [keymap] :or {keymap player-keys} :as opts}]
       (if (fn? (some-> scope .-addEventListener))
         (let [seeks  #{:seekbackward :seekforward :seekto}
               press! (fn [^js e]

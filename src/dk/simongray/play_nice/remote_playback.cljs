@@ -11,14 +11,20 @@
 
 ;; W3C Remote Playback API, Candidate Recommendation Draft of 30 April 2024
 (defn state
-  "The connection of the media `element` to a remote device: :disconnected,
-  :connecting or :connected."
+  "The remote playback of the media `element` now, as watch! passes it,
+  e.g. {:availability :unknown :state :disconnected}.
+
+  The :state is the connection to a remote device: :disconnected,
+  :connecting or :connected. Only watch! learns whether a device is
+  available, so the :availability is :unknown where the browser has Remote
+  Playback, and :unavailable where it hasn't."
   [^js element]
   (let [^js remote (.-remote element)]
-    (cond
-      (.-webkitCurrentPlaybackTargetIsWireless element) :connected
-      remote                                            (keyword (.-state remote))
-      :else                                             :disconnected)))
+    {:availability (if remote :unknown :unavailable)
+     :state        (cond
+                     (.-webkitCurrentPlaybackTargetIsWireless element) :connected
+                     remote (keyword (.-state remote))
+                     :else  :disconnected)}))
 
 (defn watch!
   "Call `f` with the remote playback of the media `element` now and
@@ -28,7 +34,7 @@
   The :availability is :available or :unavailable as the browser says, and
   :unknown until it has, or where it looks for devices only while its
   picker is open. The :state is :disconnected, :connecting or :connected,
-  from state."
+  as in state."
   [^js element f]
   (let [^js remote (.-remote element)
         stopped    (atom false)
@@ -36,7 +42,8 @@
         available  (atom (if remote :unknown :unavailable))
         shown      (atom nil)
         show!      (fn [_]
-                     (let [m {:availability @available :state (state element)}]
+                     (let [m {:availability @available
+                             :state        (:state (state element))}]
                        (when (and (not @stopped) (not= m @shown))
                          (reset! shown m)
                          (f m))))
@@ -105,7 +112,7 @@
 
       :else
       (-> (js/Promise. (fn [resolve _] (resolve (.prompt remote))))
-          (.then (fn [_] {:state (state element)})
+          (.then (fn [_] (select-keys (state element) [:state]))
                  (fn [e]
                    ;; §5.2.1 names the exceptions of prompt() in a way of
                    ;; its own, e.g. NotAllowedError for a closed picker

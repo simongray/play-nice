@@ -14,24 +14,32 @@
                             "nextslide" "enterpictureinpicture"
                             "voiceactivity"])))))
 
+(defn position-state
+  "The position state that session/position-state corrects from the
+  `duration`, `rate` and `position`, written in a row for short tests."
+  [duration rate position]
+  (session/position-state {:duration      duration
+                           :playback-rate rate
+                           :position      position}))
+
 (deftest the-position-state
   (is (= {:duration 3600 :playback-rate 1.5 :position 754}
-         (session/position-state 3600 1.5 754)))
-  (is (nil? (session/position-state ##NaN 1.0 0))
+         (position-state 3600 1.5 754)))
+  (is (nil? (position-state ##NaN 1.0 0))
       "until the duration is known")
-  (is (nil? (session/position-state nil 1.0 0)))
-  (is (nil? (session/position-state 0 1.0 0)))
+  (is (nil? (position-state nil 1.0 0)))
+  (is (nil? (position-state 0 1.0 0)))
   (is (= {:duration 3600 :playback-rate 1.0 :position 3600}
-         (session/position-state 3600 0 4000))
+         (position-state 3600 0 4000))
       "a rate of 0 and a position past the end, which the browser refuses")
-  (is (= 0 (:position (session/position-state 3600 1.0 ##NaN))))
-  (is (= 0 (:position (session/position-state 3600 1.0 ##Inf))))
-  (is (= 0 (:position (session/position-state 3600 1.0 -5))))
-  (is (= 1.0 (:playback-rate (session/position-state 3600 ##NaN 0))))
-  (is (= 1.0 (:playback-rate (session/position-state 3600 ##Inf 0))))
-  (is (= -1 (:playback-rate (session/position-state 3600 -1 0))) "backwards")
+  (is (= 0 (:position (position-state 3600 1.0 ##NaN))))
+  (is (= 0 (:position (position-state 3600 1.0 ##Inf))))
+  (is (= 0 (:position (position-state 3600 1.0 -5))))
+  (is (= 1.0 (:playback-rate (position-state 3600 ##NaN 0))))
+  (is (= 1.0 (:playback-rate (position-state 3600 ##Inf 0))))
+  (is (= -1 (:playback-rate (position-state 3600 -1 0))) "backwards")
   (is (= {:duration ##Inf :playback-rate 1.0 :position 754}
-         (session/position-state ##Inf 1.0 754))
+         (position-state ##Inf 1.0 754))
       "a live stream"))
 
 (deftest a-media-element
@@ -97,10 +105,10 @@
 (defn press
   "The position of a stand-in media element at `current-time` after a
   press of the button in `details`, with the handlers that element-actions
-  returns for it with the `args`."
-  [current-time details & args]
+  returns for it with the `opts`."
+  [current-time details opts]
   (let [^js el #js {:currentTime current-time :duration 3600}]
-    ((get (apply session/element-actions el args) (:action details)) details)
+    ((get (session/element-actions el opts) (:action details)) details)
     (.-currentTime el)))
 
 (deftest clips
@@ -126,20 +134,27 @@
         "the seconds that the browser asks for")
     (is (= 130 (press 100
                       {:action :seekforward :seek-offset 15}
-                      offsets
-                      {:ignore-seek-offset true}))
+                      (assoc offsets :ignore-seek-offset true)))
         "or the offsets, even where it asks for others")
     (is (= 754 (press 100
                       {:action :seekto :seek-time 754}
-                      offsets
-                      {:ignore-seek-offset true})))
+                      (assoc offsets :ignore-seek-offset true))))
     (is (not-any? #{:previoustrack :nexttrack}
                   (keys (session/element-actions #js {} offsets))))
-    (is (= 130 (press 100 {:action :nexttrack} offsets skips)))
-    (is (= 85 (press 100 {:action :previoustrack} offsets skips)))
+    (is (= 130 (press 100 {:action :nexttrack} (merge offsets skips))))
+    (is (= 85 (press 100 {:action :previoustrack} (merge offsets skips))))
     (is (= #{:play :pause :stop :seekto :seekforward :nexttrack}
-           (set (keys (session/element-actions #js {} {:seekforward 30} skips))))
+           (set (keys (session/element-actions #js {} (merge {:seekforward 30}
+                                                             skips)))))
         "only the track buttons whose skips have seconds")))
+
+(deftest stopping
+  (let [paused (atom 0)
+        ^js el #js {:currentTime 754 :pause #(swap! paused inc)}]
+    ((:stop (session/element-actions el)) {:action :stop})
+    (is (= 1 @paused))
+    (is (= 754 (.-currentTime el))
+        "where it is, as Media3 stops, for a listener to resume")))
 
 (deftest the-metadata
   (is (= {:title        "Talk"
@@ -165,7 +180,7 @@
 
 (deftest without-a-session
   (let [opts {:session nil}]
-    (is (nil? (session/support opts)))
+    (is (nil? (session/support! opts)))
     (is (nil? (session/metadata! {:title "x"} opts)))
     (is (nil? (session/actions! {:play identity} opts)))
     (is (nil? (session/position! {:duration 60} opts)))

@@ -32,7 +32,7 @@
 ;; HTML §6.4.3: the activation-triggering input events
 (def activation-events
   "The events at which a page may gain user activation."
-  ["keydown" "mousedown" "pointerdown" "pointerup" "touchend"])
+  [:keydown :mousedown :pointerdown :pointerup :touchend])
 
 (defn on-activation!
   "Call `f` with no arguments once the page has user activation, with the
@@ -63,14 +63,14 @@
        (let [capture #js {:capture true}]
          (letfn [(stop! []
                    (doseq [event activation-events]
-                     (.removeEventListener window event listen! capture))
+                     (.removeEventListener window (name event) listen! capture))
                    nil)
                  (listen! [_]
                    (when (or (nil? activation) (.-isActive activation))
                      (stop!)
                      (f)))]
            (doseq [event activation-events]
-             (.addEventListener window event listen! capture))
+             (.addEventListener window (name event) listen! capture))
            stop!))
 
        :else

@@ -9,7 +9,8 @@
 
       (-> (enter! video)
           (.then prn))
-      ;; prints {:width 320 :height 180}, or e.g. {:refused :not-allowed}
+      ;; prints {:picture-in-picture true :width 320 :height 180}, or e.g.
+      ;; {:refused :not-allowed}
 
   To keep track of whether the video is in Picture-in-Picture, use
   watch!, which also sees the user close the window."
@@ -39,11 +40,13 @@
   [video]
   (nil? (obstacle video)))
 
-(defn in-picture-in-picture?
-  "Whether the `video` is in Picture-in-Picture now."
+(defn state
+  "The Picture-in-Picture state of the `video` now, e.g.
+  {:picture-in-picture true}. Only watch! knows the size of the window."
   [^js video]
   (let [^js document (.-ownerDocument video)]
-    (identical? video (some-> document .-pictureInPictureElement))))
+    {:picture-in-picture
+     (identical? video (some-> document .-pictureInPictureElement))}))
 
 (defn- request!
   "A promise of the answer to the `video`'s request for Picture-in-Picture,
@@ -51,7 +54,9 @@
   [^js video]
   (-> (js/Promise. (fn [resolve _] (resolve (.requestPictureInPicture video))))
       (.then (fn [^js window]
-               {:width (.-width window) :height (.-height window)})
+               {:picture-in-picture true
+                :width              (.-width window)
+                :height             (.-height window)})
              (fn [e]
                (let [refused (media/refusal e)]
                  ;; §4.1 says NotAllowedError for a page that may not, and
@@ -79,15 +84,17 @@
   "Show the `video` in Picture-in-Picture, and return a promise of the
   answer, which never rejects:
 
-  - the size of the window, e.g. {:width 320 :height 180}
+  - its state, as watch! passes it, with the size of the window, e.g.
+    {:picture-in-picture true :width 320 :height 180}
   - {:refused :not-allowed} without a click, or where the page may not
   - {:refused :not-supported} where the browser has no Picture-in-Picture
     for it, e.g. for an audio element
   - {:refused :disabled} for a video with disablePictureInPicture
   - {:refused :no-video} for a video without a video track
 
-  Call it in a click handler, since Chrome and WebKit refuse it otherwise. A video without its metadata yet enters once it has loaded
-  it, as long as the click still counts, e.g. for 5 seconds in Chrome."
+  Call it in a click handler, since Chrome and WebKit refuse it otherwise.
+  A video without its metadata yet enters once it has loaded it, as long
+  as the click still counts, e.g. for 5 seconds in Chrome."
   [^js video]
   (if (and (nil? (obstacle video)) (zero? (.-readyState video)))
     (.then (metadata video) #(attempt! video))
@@ -99,7 +106,7 @@
   [^js video]
   (let [^js document (.-ownerDocument video)
         left         {:picture-in-picture false}]
-    (if (in-picture-in-picture? video)
+    (if (:picture-in-picture (state video))
       (-> (js/Promise. (fn [resolve _]
                          (resolve (.exitPictureInPicture document))))
           (.then (constantly left) media/refusal))
@@ -139,7 +146,7 @@
                   (show! {:picture-in-picture false}))]
     (.addEventListener video "enterpictureinpicture" enter)
     (.addEventListener video "leavepictureinpicture" leave)
-    (show! {:picture-in-picture (in-picture-in-picture? video)})
+    (show! (state video))
     (fn []
       (.removeEventListener video "enterpictureinpicture" enter)
       (.removeEventListener video "leavepictureinpicture" leave)

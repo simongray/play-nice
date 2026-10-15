@@ -26,7 +26,7 @@
         ^js v    (muted-video)
         ^js bar  (.querySelector p "[role=slider]")
         stops    [(controls/listen! p v handlers)
-                  (controls/listen! bar v handlers controls/seek-bar-keys)]
+                  (controls/listen! bar v handlers {:keymap controls/seek-bar-keys})]
         press!   (fn [selector key]
                    (let [^js e (js/KeyboardEvent. "keydown"
                                                   #js {:key        key

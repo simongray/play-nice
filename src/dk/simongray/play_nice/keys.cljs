@@ -1,4 +1,4 @@
-(ns dk.simongray.play-nice.keys
+(ns ^:no-doc dk.simongray.play-nice.keys
   "Conversion between Clojure maps with kebab-case keys and the JavaScript
   objects of the specs' dictionaries, e.g. {:seek-time 12} and
   {seekTime: 12}.

@@ -69,10 +69,10 @@
 
 (deftest the-rate
   (let [^js v (muted-video)]
-    (is (= {:playback-rate 16 :refused 20} (media/rate! v 20))
+    (is (= {:playback-rate 16 :requested 20} (media/rate! v 20))
         "where Chromium would throw")
     (is (= 16 (.-playbackRate v)))
-    (is (= {:playback-rate 0.0625 :refused -1} (media/rate! v -1)))
+    (is (= {:playback-rate 0.0625 :requested -1} (media/rate! v -1)))
     (is (= {:playback-rate 1.75 :preserves-pitch false}
            (media/rate! v 1.75 {:preserves-pitch false})))
     (is (= [1.75 false] [(.-playbackRate v) (.-preservesPitch v)]))))
@@ -81,7 +81,7 @@
   (let [^js v (muted-video)]
     (is (= {:volume 0.125} (media/volume! v 0.5 {:curve :cubic})))
     (is (= 0.125 (.-volume v)) "which an iPhone shows too, though it ignores it")
-    (is (< (abs (- 0.5 (media/level v :cubic))) 1e-9))
+    (is (< (abs (- 0.5 (media/level v {:curve :cubic}))) 1e-9))
     (run #(.then (media/volume-locked!)
                  (fn [locked]
                    (is (= (boolean (re-find #"iPhone" js/navigator.userAgent))
@@ -115,7 +115,7 @@
          #(.then (media/apply! v [[:pause] [:seek 0.5] [:seek ##Inf]])
                  (fn [[paused seeked refused]]
                    (is (= [{:paused true} {:current-time 0.5}] [paused seeked]))
-                   (is (= ##Inf (:refused refused))
+                   (is (= :not-finite (:refused refused))
                        "a position at which the element would throw")
                    (is (true? (.-paused v))))))))
 

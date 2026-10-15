@@ -81,6 +81,10 @@ project. To follow the state of an app, e.g. in an atom or with
 re-frame, see
 [How to keep the lock screen in step with your app's state](doc/app-state.md).
 
+A function whose name ends in `!` changes the page or returns a
+promise, and its promise never rejects. The others only read or
+compute.
+
 The keys of the maps are the members of the spec's dictionaries in
 kebab-case, e.g. `:chapter-info` for `chapterInfo`. The actions and the
 spec's other enum values are keywords, e.g. `:seekto`. The
@@ -103,27 +107,28 @@ refused:
 ;; => #{:voiceactivity}   ; in Chrome and Firefox, which lack it
 ```
 
-To offer only the buttons that work, call `session/support` first. It
+To offer only the buttons that work, call `session/support!` first. It
 also says whether the browser accepts a position state and chapters. To
 test your handlers in Node, see
 [How to test a player without the browser's session](doc/testing.md).
 
 Merge your own handlers over those of `element-actions`, which play,
-pause, stop and seek the element itself. Keep seekto among them: Safari
-drops its own buttons once a page sets a handler, so without seekto its
-lock screen has no scrubber. The skips need their seconds, since the
-spec has no default.
+pause, stop and seek the element itself. Stop pauses the element where
+it is, as Android's Media3 stops, so the listener can resume there. Keep
+seekto among the handlers: Safari drops its own buttons once a page sets
+a handler, so without seekto its lock screen has no scrubber. The skips
+need their seconds, since the spec has no default.
 
 A skip uses the seconds that the browser asks for, e.g. the 15 of
 Safari's lock screen, and yours where it asks for none. To skip by yours
 everywhere, and to make the next and previous buttons skip too, e.g. on
-headphones, pass these options:
+headphones, add these options:
 
 ```clojure
-(session/element-actions audio
-                         {:seekbackward 15 :seekforward 30}
-                         {:ignore-seek-offset true
-                          :track-buttons      :skips})
+(session/element-actions audio {:seekbackward       15
+                                :seekforward        30
+                                :ignore-seek-offset true
+                                :track-buttons      :skips})
 ```
 
 For a previous button of your own, `previous-track` returns what it
@@ -196,7 +201,7 @@ plays. For a seek bar that moves as it plays, follow that event too:
 
 ```clojure
 (media/watch! audio #(swap! app assoc :player %)
-              {:events (conj media/events "timeupdate")})
+              {:events (conj media/events :timeupdate)})
 ```
 
 Where your effects are data, as in re-frame or Nexus, `apply!` does
@@ -275,7 +280,8 @@ it without a click:
 
 (-> (pip/enter! video)
     (.then prn))
-;; prints {:width 320 :height 180}, or e.g. {:refused :not-allowed}
+;; prints {:picture-in-picture true :width 320 :height 180}, or e.g.
+;; {:refused :not-allowed}
 
 (def stop!
   (pip/watch! video #(swap! app assoc :pip %)))
@@ -412,7 +418,7 @@ the position in words for a screen reader, and its keys from
 ;; with {:role "slider" :aria-valuenow 750
 ;;       :aria-valuetext "12 minutes, 30 seconds" …}
 
-(controls/listen! seek-bar audio handlers controls/seek-bar-keys)
+(controls/listen! seek-bar audio handlers {:keymap controls/seek-bar-keys})
 ```
 
 Times in links

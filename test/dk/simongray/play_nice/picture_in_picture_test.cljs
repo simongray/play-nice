@@ -34,7 +34,7 @@
   (let [opened (fn [_] (js/Promise.resolve (window 320 180)))
         answer (fn [expected v]
                  #(.then (pip/enter! v) (fn [a] (is (= expected a)))))]
-    (run (answer {:width 320 :height 180} (video opened {}))
+    (run (answer {:picture-in-picture true :width 320 :height 180} (video opened {}))
          (answer {:refused :not-allowed} (video (refusing "NotAllowedError") {}))
          (answer {:refused :not-allowed} (video (refusing "SecurityError") {}))
          (answer {:refused :disabled} (video opened {:disablePictureInPicture true}))
@@ -51,7 +51,8 @@
     (is (pip/available? v) "before its metadata")
     (set! (.-readyState v) 1)
     (.dispatchEvent v (js/Event. "loadedmetadata"))
-    (run #(.then answer (fn [a] (is (= {:width 320 :height 180} a)))))))
+    (run #(.then answer (fn [a] (is (= {:picture-in-picture true :width 320 :height 180}
+                                       a)))))))
 
 (deftest leaving
   (let [exits  (atom 0)
@@ -60,8 +61,9 @@
     (set! (.-exitPictureInPicture d) #(js/Promise.resolve (swap! exits inc)))
     (run #(.then (pip/exit! v) (fn [a] (is (= {:picture-in-picture false} a))))
          #(is (= 0 @exits) "nothing to leave")
-         #(do (set! (.-pictureInPictureElement d) v)
-              (is (pip/in-picture-in-picture? v))
+         #(do (is (= {:picture-in-picture false} (pip/state v)))
+              (set! (.-pictureInPictureElement d) v)
+              (is (= {:picture-in-picture true} (pip/state v)))
               (pip/exit! v))
          #(is (= 1 @exits)))))
 

@@ -65,7 +65,7 @@ Put this in `src/player/core.cljs`:
                                    :type  "image/png"}]})
     (session/actions! (session/element-actions audio {:seekbackward 10
                                                       :seekforward  10}))
-    (js/console.log (pr-str (session/support)))))
+    (js/console.log (pr-str (session/support!)))))
 ```
 
 `attach!` keeps the media controls in step with the element, `metadata!`

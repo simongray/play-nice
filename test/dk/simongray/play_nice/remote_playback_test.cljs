@@ -36,10 +36,13 @@
   (js/Promise. (fn [resolve _] (js/setTimeout resolve 0))))
 
 (deftest the-state
-  (is (= :disconnected (remote/state #js {})) "without Remote Playback")
-  (is (= :connecting (remote/state #js {:remote #js {:state "connecting"}})))
-  (is (= :connected (remote/state #js {:remote #js {:state "disconnected"}
-                                        :webkitCurrentPlaybackTargetIsWireless true}))
+  (is (= {:availability :unavailable :state :disconnected} (remote/state #js {}))
+      "without Remote Playback")
+  (is (= {:availability :unknown :state :connecting}
+         (remote/state #js {:remote #js {:state "connecting"}}))
+      "and the availability, which only watch! learns")
+  (is (= :connected (:state (remote/state #js {:remote #js {:state "disconnected"}
+                                                :webkitCurrentPlaybackTargetIsWireless true})))
       "on AirPlay, as WebKit says"))
 
 (deftest prompting

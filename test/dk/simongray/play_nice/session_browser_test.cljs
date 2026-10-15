@@ -70,7 +70,7 @@
         "clearing the action that the call before set")
     (reset! calls [])
     (is (= (disj session/actions :voiceactivity)
-           (:actions (session/support opts))))
+           (:actions (session/support! opts))))
     (is (not-any? #{[:handler "play" false]} @calls)
         "support leaves the library's handlers alone")))
 
@@ -210,7 +210,7 @@
       (is (= [{:src "cover.png" :sizes "512x512"}] (:artwork m)))
       (is (.endsWith (.-src (aget (.-artwork metadata) 0)) "/cover.png")
           "resolved against the page")
-      (when (:chapter-info? (session/support))
+      (when (:chapter-info? (session/support!))
         (is (= ["Intro" "Talk"]
                (mapv #(.-title ^js %) (.-chapterInfo metadata)))))
       (let [refused (session/actions! {:play          identity
@@ -218,7 +218,7 @@
                                        :voiceactivity identity})]
         (is (set/subset? refused #{:voiceactivity}))
         (is (empty? (set/intersection refused
-                                      (:actions (session/support))))))
+                                      (:actions (session/support!))))))
       (is (nil? (run! session/position! [{:duration ##Inf :position 5}
                                          {:duration 60 :position 100}
                                          {:duration      60
@@ -233,4 +233,4 @@
       (session/position! nil)
       (session/metadata! nil)
       (is (nil? (.-metadata s)) "nil clears the metadata"))
-    (is (nil? (session/support)) "nothing where the browser has none")))
+    (is (nil? (session/support!)) "nothing where the browser has none")))

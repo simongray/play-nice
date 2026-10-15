@@ -51,7 +51,7 @@ A throw would leave the other handlers unset, and all an app can do about
 a refused action is leave its button out. So `actions!` sets each
 handler on its own, and returns the refused ones as a set.
 
-No engine lists the actions it accepts, so `support` finds out by
+No engine lists the actions it accepts, so `support!` finds out by
 clearing each one and noting those that don't throw. An accepted action
 may still never be called, e.g. WebKit sends the lock screen's next
 button to nexttrack and never to skipad.

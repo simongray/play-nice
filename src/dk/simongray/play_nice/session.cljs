@@ -34,8 +34,8 @@
   "The events of a media element that attach! listens to: those that change
   its duration or rate, make its position jump, start or stop it, give it
   a new source, or say that it failed."
-  ["loadedmetadata" "durationchange" "play" "playing" "pause" "seeked"
-   "ratechange" "ended" "emptied" "error"])
+  [:loadedmetadata :durationchange :play :playing :pause :seeked :ratechange
+   :ended :emptied :error])
 
 (defn ^:no-doc finite?
   "Whether `x` is a number that's neither infinite nor NaN."
@@ -51,64 +51,72 @@
 
 ;; §9, MediaPositionState, and the steps of setPositionState in §5
 (defn position-state
-  "The position state of a player `position` seconds into a `duration` at
-  `rate`, or nil while the duration is unknown.
+  "The position state `m`, a map of its :duration, :playback-rate and
+  :position, as the browser takes it, or nil while the duration is
+  unknown.
 
   The position stays within the duration, and a rate of 0, or one that
   isn't finite, counts as 1, since setPositionState throws for either. An
   infinite duration means a live stream."
-  [duration rate position]
+  [{:keys [duration playback-rate position] :as m}]
   (when (and (number? duration) (pos? duration))
     {:duration      duration
-     :playback-rate (if (and (finite? rate) (not (zero? rate))) rate 1)
+     :playback-rate (if (and (finite? playback-rate) (not (zero? playback-rate)))
+                      playback-rate
+                      1)
      :position      (within duration (if (finite? position) position 0))}))
 
 (defn element-position
-  "The position state of a media element, from `element`, a map of its
-  :duration, :current-time and :playback-rate, or nil while the duration
-  is unknown."
-  [{:keys [duration current-time playback-rate] :as element}]
-  (position-state duration playback-rate current-time))
+  "The position state of a media element in `state`, a map of its
+  :duration, :current-time and :playback-rate, e.g. from media/state, or
+  nil while the duration is unknown."
+  [{:keys [duration current-time playback-rate] :as state}]
+  (position-state {:duration      duration
+                   :playback-rate playback-rate
+                   :position      current-time}))
 
 (defn clip-position
   "The position state of a clip of a media element, from `clip`, a map of
-  its :start and :end in seconds, e.g. from fragment/time, and `element`,
-  a map of its :current-time, :duration and :playback-rate. It's nil while
-  the end is unknown, which is the element's duration without an :end.
+  its :start and :end in seconds, e.g. from fragment/time, and `state`, a
+  map of the element's :current-time, :duration and :playback-rate. It's
+  nil while the end is unknown, which is the element's duration without
+  an :end.
 
   As a :position-fn of attach!, it puts the clip on the lock screen rather
   than the whole file, e.g. 60 seconds of an hour. Its scrubber then gives
   times within the clip, so add the start to a :seek-time of seekto."
   [{:keys [start end] :or {start 0} :as clip}
-   {:keys [current-time duration playback-rate] :as element}]
+   {:keys [current-time duration playback-rate] :as state}]
   (let [end (or end duration)]
     (when (number? end)
-      (position-state (- end start) playback-rate (- current-time start)))))
+      (position-state {:duration      (- end start)
+                       :playback-rate playback-rate
+                       :position      (- current-time start)}))))
 
 (defn element-state
-  "The :playback-state and :position-state that the session shows for
-  `element`, a media element's state as media/state gives it. The position
-  state comes from `position-fn`, e.g. element-position.
+  "The :playback-state and :position-state that the session shows for a
+  media element in `state`, as media/state gives it. The position state
+  comes from `position-fn`, e.g. element-position.
 
   An element that failed counts as paused, since a fatal error leaves its
   paused attribute false."
-  [position-fn {:keys [paused error] :as element}]
+  [position-fn {:keys [paused error] :as state}]
   {:playback-state (if (or paused error) :paused :playing)
-   :position-state (position-fn element)})
+   :position-state (position-fn state)})
 
 ;; §10: seekTime for seekto, and a seekOffset that may be missing for
 ;; seekbackward and seekforward
 (defn seek-position
-  "Where the seek action of `details` goes on a media element, from
-  `element`, a map of its :current-time and :duration, and the `offsets`
-  of seekbackward and seekforward in seconds, e.g. {:seekbackward 15
+  "Where the seek action of `details` goes on a media element in `state`,
+  a map of its :current-time and :duration, with the `offsets` of
+  seekbackward and seekforward in seconds, e.g. {:seekbackward 15
   :seekforward 30}.
 
   An offset in the details goes first. The position stays between 0 and
   the duration, and it's nil for another action, or for a seek without a
   time or an offset."
   [{:keys [action seek-offset seek-time] :as details}
-   {:keys [current-time duration] :as element}
+   {:keys [current-time duration] :as state}
    offsets]
   (let [offset (if (finite? seek-offset) seek-offset (get offsets action))
         target (case action
@@ -170,7 +178,7 @@
                    - :metadata, the last metadata it set, and :object,
                      its MediaMetadata
                    - :detach, the function that ends the attachment
-                   - :support, the answer of support"}
+                   - :support, the answer of support!"}
   states
   (js/WeakMap.))
 
@@ -204,7 +212,7 @@
                                  (name action)
                                  (some-> f (comp details)))))
 
-(defn support
+(defn support!
   "What the Media Session supports, with the `opts` above, or nil where the
   browser has none:
 
@@ -217,7 +225,7 @@
   set, and keeps those that don't throw. Call it before setting any
   handler yourself, outside the library."
   ([]
-   (support {}))
+   (support! {}))
   ([opts]
    (when-let [^js session (media-session opts)]
      (let [st     (state session)
@@ -302,10 +310,10 @@
   itself."
   ([state]
    (position! state {}))
-  ([{:keys [duration playback-rate position] :as state} opts]
+  ([state opts]
    (when-let [^js session (media-session opts)]
      (when (fn? (.-setPositionState session))
-       (let [state (position-state duration playback-rate position)]
+       (let [state (position-state state)]
          (if (and state
                   (succeeds? #(.setPositionState session (keys/->js state))))
            state
@@ -323,14 +331,17 @@
      (set! (.-playbackState session) (name state))
      state)))
 
+;; §5 says only that stop stops playback, and Media3's Player.stop keeps
+;; the position, as a listener who resumes later expects
 (defn element-actions
-  "Handlers that play, pause, stop and seek the media `element` itself, by
-  the `offsets` and with the `opts` below. The `offsets` give the seconds
-  of seekbackward and seekforward, e.g. {:seekbackward 15 :seekforward
-  30}, and a skip without one is left out, since the spec has no default.
+  "Handlers that play, pause, stop and seek the media `element` itself,
+  with the `opts` below. Stop pauses the element where it is.
 
-  - :ignore-seek-offset, true to skip by the `offsets` even where the
-    browser asks for other seconds, e.g. the 15 that WebKit offers
+  - :seekbackward and :seekforward, the seconds of each skip, e.g. 15 and
+    30, where a skip without them is left out, since the spec has no
+    default
+  - :ignore-seek-offset, true to skip by those seconds even where the
+    browser asks for others, e.g. the 15 that WebKit offers
   - :track-buttons, :skips to make previoustrack and nexttrack skip too,
     e.g. for the buttons of headphones
 
@@ -339,9 +350,8 @@
   handler, so without seekto its lock screen has no scrubber."
   ([element]
    (element-actions element {}))
-  ([element offsets]
-   (element-actions element offsets {}))
-  ([^js element offsets {:keys [ignore-seek-offset track-buttons] :as opts}]
+  ([^js element {:keys [seekbackward seekforward ignore-seek-offset track-buttons]
+                 :as   opts}]
    (let [go!    (fn [to fast?]
                   (if (and fast? (fn? (.-fastSeek element)))
                     (.fastSeek element to)
@@ -351,22 +361,20 @@
                                            ignore-seek-offset
                                            (dissoc :seek-offset))
                                          (media/state element)
-                                         offsets)
+                                         opts)
                           (go! fast-seek)))
          skips? (= :skips track-buttons)]
      (cond-> {:play   (fn [_] (media/play! element))
-              :pause  (fn [_] (.pause element))
-              :stop   (fn [_]
-                        (.pause element)
-                        (set! (.-currentTime element) 0))
+              :pause  (fn [_] (media/pause! element))
+              :stop   (fn [_] (media/pause! element))
               :seekto seek!}
-       (:seekbackward offsets) (assoc :seekbackward seek!)
-       (:seekforward offsets)  (assoc :seekforward seek!)
+       seekbackward (assoc :seekbackward seek!)
+       seekforward  (assoc :seekforward seek!)
 
-       (and skips? (:seekbackward offsets))
+       (and skips? seekbackward)
        (assoc :previoustrack (comp seek! #(assoc % :action :seekbackward)))
 
-       (and skips? (:seekforward offsets))
+       (and skips? seekforward)
        (assoc :nexttrack (comp seek! #(assoc % :action :seekforward)))))))
 
 (defn attach!

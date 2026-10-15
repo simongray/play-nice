@@ -157,10 +157,11 @@
     (is (= {:playback-rate 1.75} (media/rate! el 1.75)))
     (is (= [1.75 1.75] [(.-playbackRate el) (.-defaultPlaybackRate el)])
         "and the default, which a new source resets the rate to")
-    (is (= {:playback-rate 16 :refused 20} (media/rate! el 20)))
+    (is (= {:playback-rate 16 :requested 20} (media/rate! el 20)))
     (is (= 16 (.-playbackRate el)))
-    (is (= {:playback-rate 16 :refused "fast"} (media/rate! el "fast"))
+    (is (= {:playback-rate 16 :refused :not-finite} (media/rate! el "fast"))
         "the rate as it was")
+    (is (= {:playback-rate 16 :refused :not-finite} (media/rate! el nil)))
     (is (= {:playback-rate 2 :preserves-pitch false}
            (media/rate! el 2 {:preserves-pitch false})))
     (is (false? (.-preservesPitch el)))))
@@ -170,13 +171,24 @@
     (is (= {:volume 0.5} (media/volume! el 0.5)))
     (is (= {:volume 0.125} (media/volume! el 0.5 {:curve :cubic})))
     ;; Math.cbrt in WebKit on Linux is an ulp off
-    (is (< (abs (- 0.5 (media/level el :cubic))) 1e-9)
+    (is (< (abs (- 0.5 (media/level el {:curve :cubic}))) 1e-9)
         "the slider's level back")
     (is (= 0.125 (media/level el)))
-    (is (= {:volume 1} (media/volume! el 2)) "within 0 and 1")
-    (is (= {:volume 0} (media/volume! el -1)))
-    (is (= {:volume 0 :refused "loud"} (media/volume! el "loud"))
+    (is (= {:volume 1 :requested 2} (media/volume! el 2)) "within 0 and 1")
+    (is (= {:volume 0 :requested -1} (media/volume! el -1)))
+    (is (= {:volume 0 :refused :not-finite} (media/volume! el "loud"))
         "the volume as it was")))
+
+(deftest pausing-and-muting
+  (let [^js el  (element {})
+        paused (atom 0)]
+    (set! (.-pause el) #(swap! paused inc))
+    (is (= {:paused true} (media/pause! el)))
+    (is (= 1 @paused))
+    (is (= {:muted true} (media/muted! el true)))
+    (is (true? (.-muted el)))
+    (is (= {:muted false} (media/muted! el nil)))
+    (is (false? (.-muted el)))))
 
 (defn loader
   "A stand-in for a media element that adds the name of each attribute set
@@ -265,8 +277,10 @@
   (let [^js el (element {:current-time 12})]
     (is (= {:current-time 754} (media/seek! el 754)))
     (is (= 754 (.-currentTime el)))
-    (is (= {:current-time 754 :refused ##Inf} (media/seek! el ##Inf))
-        "where the element would throw")))
+    (is (= {:current-time 754 :refused :not-finite} (media/seek! el ##Inf))
+        "where the element would throw")
+    (is (= {:current-time 754 :refused :not-finite} (media/seek! el nil))
+        "e.g. a duration before the metadata")))
 
 (deftest applying-effects
   (let [^js el (player (constantly (js/Promise.resolve)))
@@ -314,7 +328,7 @@
     (set! (.-paused el) true)
     (.dispatchEvent el (js/Event. "pause"))
     (is (= 2 (count @states)) "until it stops")
-    (media/watch! el #(swap! states conj %) {:events ["timeupdate"]})
+    (media/watch! el #(swap! states conj %) {:events [:timeupdate]})
     (set! (.-currentTime el) 6)
     (.dispatchEvent el (js/Event. "timeupdate"))
     (is (= [5 6] (map :current-time (drop 2 @states)))

@@ -19,10 +19,10 @@
 ;; 15 to 250 ms while the element plays, and resize, for a video's size
 (def events
   "The events of a media element that watch! follows by default."
-  ["loadstart" "progress" "suspend" "abort" "error" "emptied" "stalled"
-   "loadedmetadata" "loadeddata" "canplay" "canplaythrough" "playing"
-   "waiting" "seeking" "seeked" "ended" "durationchange" "play" "pause"
-   "ratechange" "volumechange"])
+  [:loadstart :progress :suspend :abort :error :emptied :stalled
+   :loadedmetadata :loadeddata :canplay :canplaythrough :playing :waiting
+   :seeking :seeked :ended :durationchange :play :pause :ratechange
+   :volumechange])
 
 ;; §4.8.11.5 and §4.8.11.7
 (def network-states
@@ -125,8 +125,8 @@
   "Call `f` with the state of the media `element` now and whenever it
   changes, with the `opts` below, and return a function that stops it.
 
-  - :events, the events of the element to read its state at, by default
-    events, which leaves out timeupdate
+  - :events, the events of the element to read its state at, as keywords,
+    by default events, which leaves out :timeupdate
 
   The call passes the map from state to `f` only when it differs from the
   last, e.g.
@@ -143,11 +143,11 @@
                        (reset! shown m)
                        (f m))))]
      (doseq [event followed]
-       (.addEventListener element event follow!))
+       (.addEventListener element (name event) follow!))
      (follow! nil)
      (fn []
        (doseq [event followed]
-         (.removeEventListener element event follow!))
+         (.removeEventListener element (name event) follow!))
        nil))))
 
 (defn ^:no-doc refusal
@@ -224,23 +224,26 @@
   below, and return the rate as set, e.g. {:playback-rate 1.75}.
 
   The call keeps the rate within 1/16 and 16, which every engine plays,
-  and returns `x` as :refused where it had to change it, e.g.
-  {:playback-rate 16 :refused 20}. A rate that isn't finite leaves the
-  rate as it was. The call sets the default playback rate too, since a new
-  source resets the rate to it.
+  and returns `x` as :requested where it had to change it, e.g.
+  {:playback-rate 16 :requested 20}. A rate that isn't a finite number
+  leaves the rate as it was, and answers {:refused :not-finite}. The call
+  sets the default playback rate too, since a new source resets the rate
+  to it.
 
   - :preserves-pitch, false to let the pitch follow the rate, which every
     engine keeps by default"
   ([element x]
    (rate! element x {}))
   ([^js element x {:keys [preserves-pitch] :as opts}]
-   (let [r (or (rate x) (.-playbackRate element))]
-     (set! (.-defaultPlaybackRate element) r)
-     (set! (.-playbackRate element) r)
+   (let [r (rate x)]
+     (when r
+       (set! (.-defaultPlaybackRate element) r)
+       (set! (.-playbackRate element) r))
      (when (some? preserves-pitch)
        (set! (.-preservesPitch element) preserves-pitch))
-     (cond-> {:playback-rate r}
-       (not= r x)              (assoc :refused x)
+     (cond-> {:playback-rate (or r (.-playbackRate element))}
+       (nil? r)                (assoc :refused :not-finite)
+       (and r (not= r x))      (assoc :requested x)
        (some? preserves-pitch) (assoc :preserves-pitch preserves-pitch)))))
 
 ;; §4.8.11.13 says only that the range of volume "need not be linear"
@@ -253,18 +256,23 @@
 
 (defn level
   "The position of a volume slider for the media `element`, from 0 to 1,
-  on the `curve` of curves, :linear by default."
+  with the `opts` below.
+
+  - :curve, one of curves, :linear by default"
   ([element]
-   (level element :linear))
-  ([^js element curve]
+   (level element {}))
+  ([^js element {:keys [curve] :or {curve :linear} :as opts}]
    ((get-in curves [curve :level]) (.-volume element))))
 
 (defn volume!
   "Set the volume of the media `element` to the slider's `level`, from 0 to
   1, with the `opts` below, and return the volume as set, e.g. {:volume
-  0.125} for a level of 0.5 on the :cubic curve. The call keeps the level
-  within 0 and 1, and leaves the volume as it was for a level that isn't a
-  finite number, which it returns as :refused.
+  0.125} for a level of 0.5 on the :cubic curve.
+
+  The call keeps the level within 0 and 1, and returns the `level` as
+  :requested where it had to change it, e.g. {:volume 1 :requested 2}. A
+  level that isn't a finite number leaves the volume as it was, and
+  answers {:refused :not-finite}.
 
   An iPhone plays every element at the system's volume, whatever the
   page sets, which volume-locked! tells.
@@ -274,10 +282,20 @@
    (volume! element level {}))
   ([^js element level {:keys [curve] :or {curve :linear} :as opts}]
    (if-not (js/Number.isFinite level)
-     {:volume (.-volume element) :refused level}
-     (let [v ((get-in curves [curve :volume]) (max 0 (min 1 level)))]
+     {:volume (.-volume element) :refused :not-finite}
+     (let [kept (max 0 (min 1 level))
+           v    ((get-in curves [curve :volume]) kept)]
        (set! (.-volume element) v)
-       {:volume v}))))
+       (cond-> {:volume v}
+         (not= kept level) (assoc :requested level))))))
+
+(defn muted!
+  "Mute the media `element`, or unmute it where `muted?` is false, and
+  return e.g. {:muted true}."
+  [^js element muted?]
+  (let [muted (boolean muted?)]
+    (set! (.-muted element) muted)
+    {:muted muted}))
 
 ;; §4.8.11.13: a user agent's volume locked, which the volume attribute
 ;; doesn't show, but WebKit on an iPhone fires no volumechange then
@@ -331,17 +349,23 @@
       (js/Promise.resolve {:paused true})
       (play! element))))
 
+(defn pause!
+  "Pause the media `element`, and return {:paused true}."
+  [^js element]
+  (.pause element)
+  {:paused true})
+
 ;; §4.8.11.7: setting currentTime to a number that isn't finite throws
 (defn seek!
   "Move the media `element` to the `position` in seconds, and return the
   position as set, e.g. {:current-time 754}. A position that isn't a
-  finite number leaves the element where it was, and comes back as
-  :refused."
+  finite number, e.g. a duration of nil before the metadata, leaves the
+  element where it was, and answers {:refused :not-finite}."
   [^js element position]
   (if (js/Number.isFinite position)
     (do (set! (.-currentTime element) position)
         {:current-time position})
-    {:current-time (.-currentTime element) :refused position}))
+    {:current-time (.-currentTime element) :refused :not-finite}))
 
 (defn apply!
   "Apply the `effects` to the media `element` in order, and return a
@@ -352,11 +376,11 @@
   after the element, e.g. [:rate 1.5 {:preserves-pitch false}] for rate!:
 
   - [:play opts], play!
-  - [:pause], which answers {:paused true}
+  - [:pause], pause!
   - [:seek position], seek!
   - [:rate x opts], rate!
   - [:volume level opts], volume!
-  - [:muted muted?], which answers e.g. {:muted true}
+  - [:muted muted?], muted!
   - [:source m], source!
   - [:switch-source src], switch-source!
 
@@ -373,13 +397,11 @@
                     (resolve
                      (case kind
                        :play          (apply play! element args)
-                       :pause         (do (.pause element) {:paused true})
+                       :pause         (apply pause! element args)
                        :seek          (apply seek! element args)
                        :rate          (apply rate! element args)
                        :volume        (apply volume! element args)
-                       :muted         (let [muted (boolean (first args))]
-                                        (set! (.-muted element) muted)
-                                        {:muted muted})
+                       :muted         (apply muted! element args)
                        :source        (apply source! element args)
                        :switch-source (apply switch-source! element args)
                        {:refused :unknown-effect})))))]
