@@ -1,6 +1,7 @@
 (ns dk.simongray.play-nice.media
   "The state of an audio or video element as data, and the calls that play
-  it, load a source and set its rate.
+  it, seek, load a source and set its rate and volume, which apply! also
+  takes as data.
 
   The functions take the element itself, so in a test any object with the
   element's attributes and methods stands in for it, e.g. an EventTarget in
@@ -329,3 +330,61 @@
     (if paused
       (js/Promise.resolve {:paused true})
       (play! element))))
+
+;; §4.8.11.7: setting currentTime to a number that isn't finite throws
+(defn seek!
+  "Move the media `element` to the `position` in seconds, and return the
+  position as set, e.g. {:current-time 754}. A position that isn't a
+  finite number leaves the element where it was, and comes back as
+  :refused."
+  [^js element position]
+  (if (js/Number.isFinite position)
+    (do (set! (.-currentTime element) position)
+        {:current-time position})
+    {:current-time (.-currentTime element) :refused position}))
+
+(defn apply!
+  "Apply the `effects` to the media `element` in order, and return a
+  promise of a vector of their answers, which never rejects.
+
+  The `effects` are one effect or a sequence of them. An effect is a
+  vector of a keyword and the arguments that the function it names takes
+  after the element, e.g. [:rate 1.5 {:preserves-pitch false}] for rate!:
+
+  - [:play opts], play!
+  - [:pause], which answers {:paused true}
+  - [:seek position], seek!
+  - [:rate x opts], rate!
+  - [:volume level opts], volume!
+  - [:muted muted?], which answers e.g. {:muted true}
+  - [:source m], source!
+  - [:switch-source src], switch-source!
+
+  An effect of another kind answers {:refused :unknown-effect}, so you can
+  apply your own, e.g. as a re-frame effect:
+
+      (rf/reg-fx :media #(media/apply! audio %))
+
+      {:fx [[:media [[:seek 754] [:play]]]]}"
+  [^js element effects]
+  (let [answer (fn [[kind & args :as effect]]
+                 (js/Promise.
+                  (fn [resolve _]
+                    (resolve
+                     (case kind
+                       :play          (apply play! element args)
+                       :pause         (do (.pause element) {:paused true})
+                       :seek          (apply seek! element args)
+                       :rate          (apply rate! element args)
+                       :volume        (apply volume! element args)
+                       :muted         (let [muted (boolean (first args))]
+                                        (set! (.-muted element) muted)
+                                        {:muted muted})
+                       :source        (apply source! element args)
+                       :switch-source (apply switch-source! element args)
+                       {:refused :unknown-effect})))))]
+    (-> (if (keyword? (first effects)) [effects] effects)
+        (->> (mapv #(.catch (answer %) refusal)))
+        into-array
+        js/Promise.all
+        (.then vec))))

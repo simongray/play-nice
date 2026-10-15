@@ -186,6 +186,18 @@ returns a function that stops it:
 ;;                  :duration 3600 :playback-rate 1.5 …}
 ```
 
+Where your effects are data, as in re-frame or Nexus, `apply!` does
+what each one names, in order, and returns a promise of the answers. An
+effect is a keyword and the arguments of the function that it names:
+
+```clojure
+(rf/reg-fx :media #(media/apply! audio %))
+
+(rf/reg-event-fx :player/resume
+  (fn [_ [_ position]]
+    {:fx [[:media [[:seek position] [:play]]]]}))
+```
+
 A volume slider sounds even along its length on the `:cubic` curve, e.g.
 `(media/volume! audio 0.5 {:curve :cubic})`. An iPhone ignores the
 volume a page sets, so hide the slider where `media/volume-locked!`

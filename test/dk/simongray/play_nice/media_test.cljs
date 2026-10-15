@@ -261,6 +261,41 @@
                    (is (= {:paused true} answer))
                    (is (= 12 (.-currentTime b))))))))
 
+(deftest seeking
+  (let [^js el (element {:current-time 12})]
+    (is (= {:current-time 754} (media/seek! el 754)))
+    (is (= 754 (.-currentTime el)))
+    (is (= {:current-time 754 :refused ##Inf} (media/seek! el ##Inf))
+        "where the element would throw")))
+
+(deftest applying-effects
+  (let [^js el (player (constantly (js/Promise.resolve)))
+        paused (atom 0)]
+    (set! (.-pause el) #(swap! paused inc))
+    (run #(.then (media/apply! el [[:rate 1.5] [:seek 754] [:muted true]
+                                   [:volume 0.5 {:curve :cubic}] [:play]])
+                 (fn [answers]
+                   (is (= [{:playback-rate 1.5} {:current-time 754} {:muted true}
+                           {:volume 0.125} {:playing true}]
+                          answers))
+                   (is (= [1.5 754 true 0.125]
+                          [(.-playbackRate el) (.-currentTime el) (.-muted el)
+                           (.-volume el)]))))
+         #(.then (media/apply! el [:pause])
+                 (fn [answers]
+                   (is (= [{:paused true}] answers) "one effect alone")
+                   (is (= 1 @paused))))
+         #(.then (media/apply! el [[:skip 30] [:source {:src "/272.mp3"}]])
+                 (fn [answers]
+                   (is (= [{:refused :unknown-effect} {:src "/272.mp3"}] answers)
+                       "and the rest, after one it doesn't know")))
+         #(.then (media/apply! (element {}) [:play])
+                 (fn [answers]
+                   (is (= [{:refused :type}] answers)
+                       "a refusal, where the element throws")))
+         #(.then (media/apply! el nil)
+                 (fn [answers] (is (= [] answers)))))))
+
 (deftest watching-an-element
   (let [states (atom [])
         ^js el (element {})

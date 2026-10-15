@@ -313,6 +313,26 @@ What the promise of `play!` resolves to:
 `switch-source!` answers `{:paused true}` for an element that was
 paused, and otherwise as `play!` does.
 
+### Effects
+
+What `apply!` does for each effect, and its answer:
+
+| Effect | Does | Answer |
+|---|---|---|
+| `[:play opts]` | `play!` | As `play!` |
+| `[:pause]` | Pauses the element | `{:paused true}` |
+| `[:seek position]` | `seek!` | E.g. `{:current-time 754}`, or `{:current-time 12 :refused ##Inf}` for a position that isn't finite, where the element would throw |
+| `[:rate x opts]` | `rate!` | As `rate!` |
+| `[:volume level opts]` | `volume!` | As `volume!` |
+| `[:muted muted?]` | Mutes or unmutes it | E.g. `{:muted true}` |
+| `[:source m]` | `source!` | As `source!` |
+| `[:switch-source src]` | `switch-source!` | As `switch-source!` |
+| Any other | Nothing | `{:refused :unknown-effect}` |
+
+The answers come in the order of the effects. An effect that throws
+answers as a refusal, e.g. `{:refused :type}` for a TypeError, so the
+promise never rejects.
+
 ### Sources
 
 The map of `source!`:

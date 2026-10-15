@@ -104,6 +104,21 @@
                    (is (= {:paused true} answer))
                    (is (true? (.-paused v))))))))
 
+(deftest applying-effects
+  (let [^js v (muted-video)
+        src   (silence)]
+    (run #(.then (media/apply! v [[:source {:src src}] [:rate 1.5] [:play]])
+                 (fn [answers]
+                   (is (= [{:src src} {:playback-rate 1.5} {:playing true}]
+                          answers))
+                   (is (false? (.-paused v)))))
+         #(.then (media/apply! v [[:pause] [:seek 0.5] [:seek ##Inf]])
+                 (fn [[paused seeked refused]]
+                   (is (= [{:paused true} {:current-time 0.5}] [paused seeked]))
+                   (is (= ##Inf (:refused refused))
+                       "a position at which the element would throw")
+                   (is (true? (.-paused v))))))))
+
 (deftest watching-an-element
   (let [^js v  (muted-video)
         states (atom [])
