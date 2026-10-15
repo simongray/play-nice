@@ -80,6 +80,11 @@ which `session/actions` holds:
 The handlers are a map of action to a function of the details. A nil
 function clears its action.
 
+`previous-track` returns `:previous` within the first 3 seconds of an
+item that has one before it, and `:restart` otherwise, as
+[Media3](https://developer.android.com/reference/androidx/media3/common/Player#seekToPrevious())
+does.
+
 ### Details
 
 A handler gets the details as a map of the keys of
@@ -138,6 +143,8 @@ counts an element with an error as paused.
 |---|---|---|
 | `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
 | `:position-fn` | `attach!` | A function from the element map to the position state, e.g. `element-position`. Without it, the position state stays clear. |
+| `:ignore-seek-offset` | `element-actions` | True to skip by the offsets even where the details have a `:seek-offset` |
+| `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the offsets give their seconds |
 
 The offsets of `element-actions` are a map of the seconds of each skip,
 e.g. `{:seekbackward 15 :seekforward 30}`.

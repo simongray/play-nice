@@ -110,6 +110,22 @@ drops its own buttons once a page sets a handler, so without seekto its
 lock screen has no scrubber. The skips need their seconds, since the
 spec has no default.
 
+A skip uses the seconds that the browser asks for, e.g. the 15 of
+Safari's lock screen, and yours where it asks for none. To skip by yours
+everywhere, and to make the next and previous buttons skip too, e.g. on
+headphones, pass these options:
+
+```clojure
+(session/element-actions audio
+                         {:seekbackward 15 :seekforward 30}
+                         {:ignore-seek-offset true
+                          :track-buttons      :skips})
+```
+
+For a previous button of your own, `previous-track` returns what it
+should do, as Android's players have it, e.g. `:restart` 42 seconds into
+a track and `:previous` within the first 3 seconds.
+
 The position
 ------------
 

@@ -104,6 +104,20 @@
     (when (finite? target)
       (within duration target))))
 
+;; §5 lets previoustrack restart the item or go to the one before, which
+;; Media3's BasePlayer.seekToPrevious settles, with a default of 3000 ms
+(defn previous-track
+  "What the previoustrack button does at `position` seconds into an item,
+  where `previous?` says whether an item comes before it: :previous within
+  the first `seconds`, 3 by default, as in Android's Media3, and otherwise
+  :restart, e.g. at 42 seconds."
+  ([position previous?]
+   (previous-track position previous? 3))
+  ([position previous? seconds]
+   (if (and previous? (<= position seconds))
+     :previous
+     :restart)))
+
 (defn- chapter?
   "Whether the `chapter` has a start time that Chromium accepts: none,
   which means 0, or a finite number of 0 or more."
@@ -304,26 +318,36 @@
    :error         (media/error element)})
 
 (defn element-actions
-  "Handlers that play, pause, stop and seek the media `element` itself. The
-  `offsets` give the seconds of seekbackward and seekforward, e.g.
-  {:seekbackward 15 :seekforward 30}, and a skip without one is left out,
-  since the spec has no default.
+  "Handlers that play, pause, stop and seek the media `element` itself, by
+  the `offsets` and with the `opts` below. The `offsets` give the seconds
+  of seekbackward and seekforward, e.g. {:seekbackward 15 :seekforward
+  30}, and a skip without one is left out, since the spec has no default.
+
+  - :ignore-seek-offset, true to skip by the `offsets` even where the
+    browser asks for other seconds, e.g. the 15 that WebKit offers
+  - :track-buttons, :skips to make previoustrack and nexttrack skip too,
+    e.g. for the buttons of headphones
 
   Merge your own handlers over them before passing them to actions!. Keep
   seekto among them: Safari drops its own buttons once a page sets a
   handler, so without seekto its lock screen has no scrubber."
   ([element]
    (element-actions element {}))
-  ([^js element offsets]
-   (let [go!   (fn [to fast?]
-                 (if (and fast? (fn? (.-fastSeek element)))
-                   (.fastSeek element to)
-                   (set! (.-currentTime element) to)))
-         seek! (fn [{:keys [fast-seek] :as details}]
-                 (some-> (seek-position details
-                                        (element-attributes element)
-                                        offsets)
-                         (go! fast-seek)))]
+  ([element offsets]
+   (element-actions element offsets {}))
+  ([^js element offsets {:keys [ignore-seek-offset track-buttons] :as opts}]
+   (let [go!    (fn [to fast?]
+                  (if (and fast? (fn? (.-fastSeek element)))
+                    (.fastSeek element to)
+                    (set! (.-currentTime element) to)))
+         seek!  (fn [{:keys [fast-seek] :as details}]
+                  (some-> (seek-position (cond-> details
+                                           ignore-seek-offset
+                                           (dissoc :seek-offset))
+                                         (element-attributes element)
+                                         offsets)
+                          (go! fast-seek)))
+         skips? (= :skips track-buttons)]
      (cond-> {:play   (fn [_] (media/play! element))
               :pause  (fn [_] (.pause element))
               :stop   (fn [_]
@@ -331,7 +355,13 @@
                         (set! (.-currentTime element) 0))
               :seekto seek!}
        (:seekbackward offsets) (assoc :seekbackward seek!)
-       (:seekforward offsets)  (assoc :seekforward seek!)))))
+       (:seekforward offsets)  (assoc :seekforward seek!)
+
+       (and skips? (:seekbackward offsets))
+       (assoc :previoustrack (comp seek! #(assoc % :action :seekbackward)))
+
+       (and skips? (:seekforward offsets))
+       (assoc :nexttrack (comp seek! #(assoc % :action :seekforward)))))))
 
 (defn attach!
   "Keep the Media Session in step with the media `element`, with the `opts`

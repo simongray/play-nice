@@ -66,6 +66,22 @@ its scrubber and its skips. That's why `element-actions` exists: its
 handlers do what the browser would, and an app merges its own over them.
 
 
+## The skip seconds
+
+The details of a skip may have seconds of the browser's own. According to
+its source, WebKit offers Apple's lock screen skips of 15 seconds and
+sends those 15 with each, while Chromium sends a skip from Linux's media
+controls without any. So a skip uses the browser's seconds where it has
+them, since its button most likely shows them, and the app's otherwise.
+Ignoring the browser's seconds is an option, at the cost of a button that
+may say 15 and skip 30.
+
+Making the next and previous buttons skip is an option too, since it
+gives them another meaning than their own. What a previous button does
+follows Android's Media3: it goes to the item before within the first 3
+seconds, and otherwise to the start of the item.
+
+
 ## A failed element is paused
 
 A fatal error fires only `error` at the media element, and leaves

@@ -86,6 +86,49 @@
                                      {}))
         "no offset")))
 
+(deftest the-previous-track
+  (is (= :previous (session/previous-track 2.1 true)))
+  (is (= :previous (session/previous-track 3 true)) "at 3 seconds too")
+  (is (= :restart (session/previous-track 42 true)))
+  (is (= :restart (session/previous-track 2.1 false)) "the first item")
+  (is (= :previous (session/previous-track 8 true 10)) "seconds of your own")
+  (is (= :restart (session/previous-track ##NaN true)) "no position"))
+
+(defn press
+  "The position of a stand-in media element at `current-time` after a
+  press of the button in `details`, with the handlers that element-actions
+  returns for it with the `args`."
+  [current-time details & args]
+  (let [^js el #js {:currentTime current-time :duration 3600}]
+    ((get (apply session/element-actions el args) (:action details)) details)
+    (.-currentTime el)))
+
+(deftest the-buttons-of-an-element
+  (let [offsets {:seekbackward 15 :seekforward 30}
+        skips   {:track-buttons :skips}]
+    (is (= #{:play :pause :stop :seekto}
+           (set (keys (session/element-actions #js {}))))
+        "no skips without their seconds")
+    (is (= 130 (press 100 {:action :seekforward} offsets)))
+    (is (= 115 (press 100 {:action :seekforward :seek-offset 15} offsets))
+        "the seconds that the browser asks for")
+    (is (= 130 (press 100
+                      {:action :seekforward :seek-offset 15}
+                      offsets
+                      {:ignore-seek-offset true}))
+        "or the offsets, even where it asks for others")
+    (is (= 754 (press 100
+                      {:action :seekto :seek-time 754}
+                      offsets
+                      {:ignore-seek-offset true})))
+    (is (not-any? #{:previoustrack :nexttrack}
+                  (keys (session/element-actions #js {} offsets))))
+    (is (= 130 (press 100 {:action :nexttrack} offsets skips)))
+    (is (= 85 (press 100 {:action :previoustrack} offsets skips)))
+    (is (= #{:play :pause :stop :seekto :seekforward :nexttrack}
+           (set (keys (session/element-actions #js {} {:seekforward 30} skips))))
+        "only the track buttons whose skips have seconds")))
+
 (deftest the-metadata
   (is (= {:title        "Talk"
           :artwork      [{:src "cover.png"}]
