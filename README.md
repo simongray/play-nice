@@ -365,6 +365,22 @@ the position in words for a screen reader, and its keys from
 (controls/listen! seek-bar audio handlers controls/seek-bar-keys)
 ```
 
+Times in links
+--------------
+
+`fragment/time` reads the interval of a media fragment, e.g. `#t=73,133`
+at the end of the file's URL, where the browser starts the file, and
+`fragment/link-time` the `t` of a page's link, e.g. `?t=1m13s`. For a
+soundbite of a longer episode, `session/clip-position` puts the clip on
+the lock screen rather than the whole file:
+
+```clojure
+(require '[dk.simongray.play-nice.fragment :as fragment])
+
+(session/attach! audio {:position-fn (partial session/clip-position
+                                              (fragment/time (.-src audio)))})
+```
+
 What the browser can play
 -------------------------
 

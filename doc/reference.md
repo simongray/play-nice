@@ -161,6 +161,35 @@ map:
 | `:chapter-info?` | Whether its metadata can have chapters |
 
 
+## Times in links
+
+The `fragment` namespace follows
+[Media Fragments URI 1.0 (basic)](https://www.w3.org/TR/media-frags/),
+a W3C Recommendation of 25 September 2012.
+
+`time` returns the interval of a URL's temporal fragment, its last valid
+`t`, as a map of its `:start` and `:end` in seconds, e.g. `{:start 73
+:end 133}` for `#t=npt:73,133`. The start is 0 where the fragment leaves
+it out, and the end is left out where the fragment does. The times are
+Normal Play Time, which `npt` reads:
+
+| Form | Example | Seconds |
+|---|---|---|
+| Seconds | `73.5` | 73.5 |
+| Minutes and seconds | `01:13` | 73 |
+| Hours, minutes and seconds | `1:02:03.5` | 3723.5 |
+
+Minutes and seconds take two digits each. The SMPTE and clock formats of
+the advanced profile count as invalid.
+
+`link-time` returns the seconds of a page's `t` query parameter, in the
+forms `73`, `73s`, `1m13s`, `1h2m3s` and `01:13`.
+
+`session/clip-position` takes a map of a clip's `:start` and `:end`, e.g.
+from `time`, and the element map, and returns the position state within
+the clip. Without an `:end`, the clip ends with the file.
+
+
 ## What the browser can play
 
 The `capabilities` namespace follows the
@@ -768,6 +797,15 @@ a network with an AirPlay device:
 
 Nothing was cast, since that takes a click in a picker, and would have
 played on someone's device.
+
+### Media fragments
+
+A file with `#t=0.5`, over HTTP or as a blob URL, tried on 15 October
+2026 through Playwright, and in the iOS simulator:
+
+| | Chrome | Firefox | WebKit | Safari on iOS |
+|---|---|---|---|---|
+| Starts at the fragment's start | By `loadedmetadata` | By `loadedmetadata` | After `loadedmetadata`, with `seeked` | Once it plays |
 
 ### Safari on iOS
 

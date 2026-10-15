@@ -70,6 +70,21 @@
   [{:keys [duration current-time playback-rate] :as element}]
   (position-state duration playback-rate current-time))
 
+(defn clip-position
+  "The position state of a clip of a media element, from `clip`, a map of
+  its :start and :end in seconds, e.g. from fragment/time, and `element`,
+  a map of its :current-time, :duration and :playback-rate. It's nil while
+  the end is unknown, which is the element's duration without an :end.
+
+  As a :position-fn of attach!, it puts the clip on the lock screen rather
+  than the whole file, e.g. 60 seconds of an hour. Its scrubber then gives
+  times within the clip, so add the start to a :seek-time of seekto."
+  [{:keys [start end] :or {start 0} :as clip}
+   {:keys [current-time duration playback-rate] :as element}]
+  (let [end (or end duration)]
+    (when (number? end)
+      (position-state (- end start) playback-rate (- current-time start)))))
+
 (defn element-state
   "The :playback-state and :position-state that the session shows for
   `element`, a map of a media element's attributes. The position state
