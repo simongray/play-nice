@@ -98,9 +98,12 @@
         stop!  (atom nil)]
     (run #(reset! stop! (media/watch! v (partial swap! states conj)))
          #(is (= [:idle] (map :status @states)))
+         ;; the metadata first, since an engine may resolve the play
+         ;; promise before the duration is known, e.g. at 0
          #(do (media/source! v {:src (silence)})
-              (media/play! v))
+              (metadata v))
          #(is (some (comp #{1} :duration) @states) "the metadata")
+         #(media/play! v)
          #(is (false? (:paused (last @states))) "playing")
          #(let [paused (next-event v "pause")]
             (.pause v)
