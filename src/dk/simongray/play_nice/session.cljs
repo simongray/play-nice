@@ -31,10 +31,10 @@
 
 (def element-events
   "The events of a media element that attach! listens to: those that change
-  its duration or rate, make its position jump, start or stop it, or give
-  it a new source."
+  its duration or rate, make its position jump, start or stop it, give it
+  a new source, or say that it failed."
   ["loadedmetadata" "durationchange" "play" "playing" "pause" "seeked"
-   "ratechange" "ended" "emptied"])
+   "ratechange" "ended" "emptied" "error"])
 
 (defn ^:no-doc finite?
   "Whether `x` is a number that's neither infinite nor NaN."
@@ -72,9 +72,12 @@
 (defn element-state
   "The :playback-state and :position-state that the session shows for
   `element`, a map of a media element's attributes. The position state
-  comes from `position-fn`, e.g. element-position."
-  [position-fn {:keys [paused] :as element}]
-  {:playback-state (if paused :paused :playing)
+  comes from `position-fn`, e.g. element-position.
+
+  An element that failed counts as paused, since a fatal error leaves its
+  paused attribute false."
+  [position-fn {:keys [paused error] :as element}]
+  {:playback-state (if (or paused error) :paused :playing)
    :position-state (position-fn element)})
 
 ;; §10: seekTime for seekto, and a seekOffset that may be missing for
@@ -290,13 +293,24 @@
      (set! (.-playbackState session) (name state))
      state)))
 
+;; HTML Living Standard, §4.8.11.1, MediaError
+(defn- element-error
+  "The error of the media `element` as a map of its :code and :message, or
+  nil while it has none, e.g. {:code :network}."
+  [^js element]
+  (when-let [^js e (.-error element)]
+    (cond-> {:code ({1 :aborted 2 :network 3 :decode 4 :src-not-supported}
+                    (.-code e))}
+      (not-empty (.-message e)) (assoc :message (.-message e)))))
+
 (defn- element-attributes
   "The attributes of the media `element` that a session follows."
   [^js element]
   {:duration      (.-duration element)
    :current-time  (.-currentTime element)
    :playback-rate (.-playbackRate element)
-   :paused        (.-paused element)})
+   :paused        (.-paused element)
+   :error         (element-error element)})
 
 (defn element-actions
   "Handlers that play, pause, stop and seek the media `element` itself. The
@@ -336,7 +350,7 @@
   above and below, and return a function that detaches it.
 
   - :position-fn, a function from the element's :duration, :current-time,
-    :playback-rate and :paused to its position state, e.g.
+    :playback-rate, :paused and :error to its position state, e.g.
     element-position. Without it, the position state stays clear, so that
     the browser follows the element itself.
 

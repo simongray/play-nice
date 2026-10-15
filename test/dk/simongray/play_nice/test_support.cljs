@@ -1,6 +1,6 @@
 (ns dk.simongray.play-nice.test-support
-  "Helpers for the async tests: running steps one after another, and
-  waiting for an element's next event."
+  "Helpers for the async tests: running steps one after another, waiting
+  for an element's next event, and media files made in the test."
   (:require [clojure.test :refer [async is]]))
 
 (defn run
@@ -20,3 +20,44 @@
   [^js element event]
   (js/Promise. (fn [resolve _]
                  (.addEventListener element event resolve #js {:once true}))))
+
+(defn silence
+  "An object URL of a WAV file that holds a second of silence, as 8000
+  samples of 8 bits."
+  []
+  (let [n      8000
+        buffer (js/ArrayBuffer. (+ 44 n))
+        view   (js/DataView. buffer)
+        ascii! (fn [offset s]
+                 (doseq [[i c] (map-indexed vector s)]
+                   (.setUint8 view (+ offset i) (.charCodeAt c 0))))
+        u32!   #(.setUint32 view %1 %2 true)
+        u16!   #(.setUint16 view %1 %2 true)]
+    (ascii! 0 "RIFF")
+    (u32! 4 (+ 36 n))
+    (ascii! 8 "WAVE")
+    (ascii! 12 "fmt ")
+    (u32! 16 16)
+    (u16! 20 1)                               ; PCM
+    (u16! 22 1)                               ; mono
+    (u32! 24 8000)                            ; samples per second
+    (u32! 28 8000)                            ; bytes per second
+    (u16! 32 1)                               ; bytes per sample
+    (u16! 34 8)                               ; bits per sample
+    (ascii! 36 "data")
+    (u32! 40 n)
+    (.fill (js/Uint8Array. buffer 44 n) 128)  ; silence, as 8 bits are unsigned
+    (js/URL.createObjectURL (js/Blob. #js [buffer] #js {:type "audio/wav"}))))
+
+(defn garbage
+  "An object URL of a file that claims to be WAV but isn't, so that no
+  browser plays it."
+  []
+  (js/URL.createObjectURL (js/Blob. #js ["not audio"] #js {:type "audio/wav"})))
+
+(defn muted-video
+  "A muted video element, since Chrome plays only a muted video without a
+  click."
+  []
+  (doto (js/document.createElement "video")
+    (set! -muted true)))

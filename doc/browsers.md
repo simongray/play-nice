@@ -66,6 +66,15 @@ its scrubber and its skips. That's why `element-actions` exists: its
 handlers do what the browser would, and an app merges its own over them.
 
 
+## A failed element is paused
+
+A fatal error fires only `error` at the media element, and leaves
+`paused` false. Every engine does that even for a file that won't play
+at all, so a session that follows `paused` alone keeps the lock screen
+on "playing". That's why `attach!` follows `error` too, and counts an
+element with an error as paused.
+
+
 ## Two answers about what plays
 
 Media Capabilities is the newer way to ask whether a browser can play a

@@ -5,35 +5,8 @@
             [clojure.test :refer [deftest is]]
             [dk.simongray.play-nice.keys :as keys]
             [dk.simongray.play-nice.session :as session]
-            [dk.simongray.play-nice.test-support :refer [next-event run]]))
-
-(defn silence
-  "An object URL of a WAV file that holds a second of silence, as 8000
-  samples of 8 bits."
-  []
-  (let [n      8000
-        buffer (js/ArrayBuffer. (+ 44 n))
-        view   (js/DataView. buffer)
-        ascii! (fn [offset s]
-                 (doseq [[i c] (map-indexed vector s)]
-                   (.setUint8 view (+ offset i) (.charCodeAt c 0))))
-        u32!   #(.setUint32 view %1 %2 true)
-        u16!   #(.setUint16 view %1 %2 true)]
-    (ascii! 0 "RIFF")
-    (u32! 4 (+ 36 n))
-    (ascii! 8 "WAVE")
-    (ascii! 12 "fmt ")
-    (u32! 16 16)
-    (u16! 20 1)                               ; PCM
-    (u16! 22 1)                               ; mono
-    (u32! 24 8000)                            ; samples per second
-    (u32! 28 8000)                            ; bytes per second
-    (u16! 32 1)                               ; bytes per sample
-    (u16! 34 8)                               ; bits per sample
-    (ascii! 36 "data")
-    (u32! 40 n)
-    (.fill (js/Uint8Array. buffer 44 n) 128)  ; silence, as 8 bits are unsigned
-    (js/URL.createObjectURL (js/Blob. #js [buffer] #js {:type "audio/wav"}))))
+            [dk.simongray.play-nice.test-support
+             :refer [garbage muted-video next-event run silence]]))
 
 (defn recorder
   "A stand-in for a MediaSession that adds each call to the atom `calls`,
@@ -191,6 +164,32 @@
     (reset! calls [])
     (detach)
     (is (= [] @calls) "the first detach no longer touches the session")))
+
+(deftest an-element-that-failed
+  (let [calls  (atom [])
+        opts   {:session (recorder calls {})}
+        ^js el (js/EventTarget.)]
+    (set! (.-paused el) false)
+    (session/attach! el opts)
+    (is (= [[:playback-state "playing"] [:position nil]] @calls))
+    ;; a fatal error mid-stream fires error alone, and leaves paused false
+    (set! (.-error el) #js {:code 2})
+    (.dispatchEvent el (js/Event. "error"))
+    (is (= [:playback-state "paused"] (nth @calls 2))
+        "paused, rather than playing on")))
+
+(deftest a-file-that-fails
+  (let [calls   (atom [])
+        ^js v   (muted-video)
+        detach! (session/attach! v {:session (recorder calls {})})]
+    ;; Firefox rejects the play promise before the error event fires
+    (run #(let [failed (next-event v "error")]
+            (set! (.-src v) (garbage))
+            (.catch (.play v) (constantly nil))
+            failed)
+         #(is (= [:playback-state "paused"]
+                 (last (filter (comp #{:playback-state} first) @calls))))
+         detach!)))
 
 (deftest the-session-of-the-page
   (if-let [^js s (session/media-session {})]

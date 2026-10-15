@@ -122,8 +122,10 @@ i.e. `element-position`, `element-state`, `seek-position` and the
 | `:current-time` | [`currentTime`](https://html.spec.whatwg.org/multipage/media.html#dom-media-currenttime) |
 | `:playback-rate` | [`playbackRate`](https://html.spec.whatwg.org/multipage/media.html#dom-media-playbackrate) |
 | `:paused` | [`paused`](https://html.spec.whatwg.org/multipage/media.html#dom-media-paused) |
+| `:error` | [`error`](https://html.spec.whatwg.org/multipage/media.html#dom-media-error), as a map of its `:code` and `:message`, or nil |
 
-`attach!` reads them at the events of `session/element-events`.
+`attach!` reads them at the events of `session/element-events`, and
+counts an element with an error as paused.
 
 ### Options
 
@@ -265,6 +267,13 @@ browser refuses an infinite duration.
 |---|---|---|---|
 | Chapters | Accepted, shown only in ChromeOS's media controls | Ignored | Ignored |
 | An artwork URL that doesn't parse | TypeError | TypeError | TypeError |
+
+### Media elements
+
+Tried on 15 October 2026, in the same versions. In all three, an element
+whose file won't play keeps `paused` false after the error, which is why
+`attach!` follows `error`. Firefox rejects the promise of `play()` before
+it fires `error`.
 
 
 ## Browser support

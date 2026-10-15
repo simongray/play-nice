@@ -121,9 +121,9 @@ in a crossfade, or a clip of a longer file:
 ```
 
 The function takes the element's `:duration`, `:current-time`,
-`:playback-rate` and `:paused`, and returns the position state, e.g.
-`{:duration 3600 :playback-rate 1.5 :position 754}`. For a player
-without a media element, e.g. on Web Audio, call `position!` and
+`:playback-rate`, `:paused` and `:error`, and returns the position
+state, e.g. `{:duration 3600 :playback-rate 1.5 :position 754}`. For a
+player without a media element, e.g. on Web Audio, call `position!` and
 `playback-state!` yourself, as
 [How to put a Web Audio player on the lock screen](doc/web-audio.md)
 shows.
