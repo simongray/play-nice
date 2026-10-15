@@ -322,7 +322,8 @@
 (defn source!
   "Load `m`, a map of a :src and the :position and :playback-rate to start
   at, into the media `element`. Return `m` with the rate as set, e.g.
-  {:src \"/272.mp3\" :position 754 :playback-rate 1.5}.
+  {:src \"/272.mp3\" :position 754 :playback-rate 1.5}. Other keys are left
+  alone, so `m` can be e.g. what podcast-clj's library/playback returns.
 
   A new source pauses the element without a pause event and resets its
   rate. So the call sets the src first, then the position, which the

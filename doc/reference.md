@@ -4,6 +4,34 @@ This page describes the data that play-nice takes and returns, and what
 each engine refuses. The docstrings describe the functions.
 
 
+## Namespaces
+
+The namespaces are under `dk.simongray.play-nice`:
+
+| Namespace | For |
+|---|---|
+| `media` | Playing, seeking, the rate and the volume, and the element's state |
+| `media.tracks` | Chapters, and the captions or subtitles to show |
+| `media.captions` | The user's style of captions |
+| `media.capabilities` | Which file of an episode the browser can play |
+| `media.fragment` | The times in a file's URL and in a page's link |
+| `session` | The lock screen and the headphone buttons |
+| `controls` | Keyboard shortcuts and a seek bar of your own |
+| `display.picture-in-picture` | Picture-in-Picture of a video |
+| `display.fullscreen` | Fullscreen, also on an iPhone |
+| `display.remote-playback` | Casting and AirPlay |
+| `display.wake-lock` | The screen kept on while the media plays |
+| `page.autoplay` | The browser's autoplay policy, the user's next click, and a muted video that plays while it's in view |
+| `page.tabs` | One player at a time across the tabs of an app |
+| `page.embed` | The `allow` attribute of an iframe that embeds a player |
+| `schema` | Malli schemas of the maps |
+
+Of these, `media.fragment`, `media.captions`, `controls`, `page.embed`
+and `schema` also run on the JVM, e.g. to write a page on the server. Of
+their functions, only `captions/style!` and `controls/listen!` need a
+browser.
+
+
 ## Keys and values
 
 The keys of every map are the members of the spec's dictionaries in

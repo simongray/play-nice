@@ -3,30 +3,41 @@ play-nice
 
 [![Clojars Project](https://img.shields.io/clojars/v/dk.simongray/play-nice.svg)](https://clojars.org/dk.simongray/play-nice)
 
-*Make your media play nice in ClojureScript.*
-
 This is a ClojureScript library for audio and video in the browser. It
 gives you one idiomatic Clojure API for the
 [media element](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement)
 and for the browser features that fit a player into the rest of the
-system: the lock screen and the headphone buttons, Picture-in-Picture,
-fullscreen, casting, captions, the keyboard and the rules of autoplay.
+system:
+[the lock screen and the headphone buttons](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API),
+[Picture-in-Picture](https://developer.mozilla.org/en-US/docs/Web/API/Picture-in-Picture_API),
+[fullscreen](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API),
+[casting](https://developer.mozilla.org/en-US/docs/Web/API/Remote_Playback_API),
+[captions](https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API),
+[the keyboard](https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Keyboard-navigable_JavaScript_widgets)
+and [the rules of autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay).
 
-- **Data in, data out.** The state of an element is a map, the browser's
-  names are keywords, and what you do to an element can be data too,
-  e.g. as effects in [re-frame](https://day8.github.io/re-frame/).
-- **One shape everywhere.** A `watch!` calls your function with a map
-  now and at each change, and returns a function that stops it. A
-  promise answers with a map, e.g. `{:refused :not-allowed}`, and never
-  rejects.
-- **The browsers' differences handled once.** Chrome, Firefox and
-  Safari each refuse, throw and leave out things of their own, and the
-  iPhone more so. The tests run in each of them, the iPhone included.
-- **Pure where it can be.** The parts that need no browser run on the
-  JVM too, and the rest takes stand-ins in a test.
+> This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
+> a library for making podcast software, where it puts the episode that
+> plays on the lock screen. Like podcast-clj, it was developed with
+> assistance from frontier LLMs.
 
-Here a podcast episode starts where the listener left off, at their
-rate, and shows on the lock screen with buttons that skip:
+- **Data in, data out.** States are maps, the browser's names are
+  keywords, and changes can be data too, e.g. effects in
+  [re-frame](https://day8.github.io/re-frame/).
+- **One shape everywhere.** Each part tells you its state the same way,
+  and answers with data where the browser would throw.
+- **The browsers' differences handled once.** Chrome, Firefox and Safari
+  each refuse and throw in their own ways, the iPhone most of all, and
+  the tests run in all of them.
+- **Pure where it can be.** What needs no browser runs on the JVM too,
+  and the rest can be tested with stand-ins.
+
+
+An example
+----------
+
+A podcast episode starts where the listener left off, at their rate, and
+shows on the lock screen with buttons that skip:
 
 ```clojure
 (require '[dk.simongray.play-nice.media :as media]
@@ -45,35 +56,6 @@ rate, and shows on the lock screen with buttons that skip:
 ```
 
 The library works on its own, and [with podcast-clj](#with-podcast-clj).
-
-> This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
-> a library for making podcast software, where it puts the episode that
-> plays on the lock screen. Like podcast-clj, it was developed with
-> assistance from frontier LLMs.
-
-
-Hard to find elsewhere
-----------------------
-
-Some of what the library does, you'd otherwise find only inside a large
-player, or not at all:
-
-- [Lock screen buttons that work in Safari](#the-lock-screen), which
-  drops its own buttons once a page sets one.
-- [Chapters in every browser](#chapters-and-captions), as a hidden text
-  track, since only Chromium takes them as metadata.
-- [Fullscreen on an iPhone](#picture-in-picture-fullscreen-and-casting),
-  in the system's video player where nothing else may go fullscreen.
-- [The iPhone's locked volume](#the-media-element), which a page can't
-  read, found out from the `volumechange` event that never comes.
-- [One player across the tabs of an app](#around-the-player), so that
-  two tabs don't play at once.
-- [MP3 and AAC found playable](#choosing-a-file) where Media
-  Capabilities says they aren't.
-- [Keyboard shortcuts that WCAG allows](#your-own-controls), and a seek
-  bar that a screen reader reads in the user's language.
-- [Caption styles](#chapters-and-captions) in the vocabulary of the
-  FCC's rule for caption displays.
 
 
 Getting started
@@ -113,32 +95,17 @@ keywords, e.g. `:seekto`. Where the browser refuses something, the answer
 says why with a keyword, e.g. `{:refused :not-allowed}`. Where it lacks a
 feature, the functions do nothing.
 
-The namespaces are under `dk.simongray.play-nice`, in families: `media`
-for the element itself, `display` for where it shows, and `page` for the
-page around it, beside `session`, `controls` and `schema`:
+The namespaces, under `dk.simongray.play-nice`, come in families:
 
-| Namespace | For |
-|---|---|
-| `media` | Playing, seeking, the rate and the volume, and the element's state |
-| `media.tracks` | Chapters, and the captions or subtitles to show |
-| `media.captions` | The user's style of captions |
-| `media.capabilities` | Which file of an episode the browser can play |
-| `media.fragment` | The times in a file's URL and in a page's link |
-| `session` | The lock screen and the headphone buttons |
-| `controls` | Keyboard shortcuts and a seek bar of your own |
-| `display.picture-in-picture` | Picture-in-Picture of a video |
-| `display.fullscreen` | Fullscreen, also on an iPhone |
-| `display.remote-playback` | Casting and AirPlay |
-| `display.wake-lock` | The screen kept on while the media plays |
-| `page.autoplay` | The browser's autoplay policy, the user's next click, and a muted video that plays while it's in view |
-| `page.tabs` | One player at a time across the tabs of an app |
-| `page.embed` | The `allow` attribute of an iframe that embeds a player |
-| `schema` | Malli schemas of the maps |
+- `media` for the element itself, and its tracks, captions, capabilities
+  and fragments
+- `display` for where it shows: Picture-in-Picture, fullscreen, casting
+  and the wake lock
+- `page` for the page around it: autoplay, tabs and embeds
+- `session`, `controls` and `schema` on their own
 
-Of these, `media.fragment`, `media.captions`, `controls`, `page.embed`
-and `schema` also run on the JVM, e.g. to write a page on the server. Of
-their functions, only `captions/style!` and `controls/listen!` need a
-browser.
+The [reference](doc/reference.md#namespaces) lists each of them, and
+those that also run on the JVM.
 
 
 The media element
@@ -193,24 +160,36 @@ a page sets one. How-to guides show
 Your own controls
 -----------------
 
-For a player with controls of your own, the `controls` namespace gives
-the keyboard the handlers of the lock screen. The keys work only while
-the focus is in the player, as
-[WCAG asks of shortcuts of one key](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts).
-A seek bar takes its
+For a player with controls of your own, the `controls` namespace lets
+the keyboard press the same handlers as the lock screen. The keys work
+only while the focus is in the player, as
+[WCAG asks of shortcuts of one key](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts),
+so you give `listen!` the element that holds the player. A seek bar of
+your own takes its
 [ARIA attributes](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
-from `seek-aria`, with the position in words in the user's language:
+from `seek-aria`, so that a screen reader reads the position in words in
+the user's language:
 
 ```clojure
 (require '[dk.simongray.play-nice.controls :as controls])
 
+;; what the buttons of the lock screen do to the audio element
 (def handlers
   (session/element-actions audio {:seekbackward 15 :seekforward 30}))
 
+;; in the element that holds the player, space and k play and pause,
+;; and j, l and the arrow keys skip
 (controls/listen! player audio handlers)
+
+;; in the seek bar, the arrow keys move a second, Page Up and Page Down
+;; 15 seconds, and Home and End to the start and the end
 (controls/listen! seek-bar audio handlers {:keymap controls/seek-bar-keys})
-(controls/seek-aria (media/state audio))
-;; => {:role "slider" … :aria-valuetext "12 minutes, 34 seconds"}
+
+;; the seek bar in Hiccup, from the element's state that watch! keeps
+[:div#seek-bar (merge {:aria-label "Position" :tabindex 0}
+                      (controls/seek-aria (:player @app)))]
+;; with e.g. {:role "slider" :aria-valuenow 754
+;;            :aria-valuetext "12 minutes, 34 seconds" …}
 ```
 
 
@@ -325,6 +304,30 @@ so the library doesn't depend on Malli. Check a map with Malli of your
 own, e.g. in a test: `(m/validate schema/media-effect [:seek 754])`.
 
 
+Hard to find elsewhere
+----------------------
+
+Some of what the library does, you'd otherwise find only inside a large
+player, or not at all:
+
+- [Lock screen buttons that work in Safari](#the-lock-screen), which
+  drops its own buttons once a page sets one.
+- [Chapters in every browser](#chapters-and-captions), as a hidden text
+  track, since only Chromium takes them as metadata.
+- [Fullscreen on an iPhone](#picture-in-picture-fullscreen-and-casting),
+  in the system's video player where nothing else may go fullscreen.
+- [The iPhone's locked volume](#the-media-element), which a page can't
+  read, found out from the `volumechange` event that never comes.
+- [One player across the tabs of an app](#around-the-player), so that
+  two tabs don't play at once.
+- [MP3 and AAC found playable](#choosing-a-file) where Media
+  Capabilities says they aren't.
+- [Keyboard shortcuts that WCAG allows](#your-own-controls), and a seek
+  bar that a screen reader reads in the user's language.
+- [Caption styles](#chapters-and-captions) in the vocabulary of the
+  FCC's rule for caption displays.
+
+
 With podcast-clj
 ----------------
 
@@ -337,8 +340,8 @@ Neither depends on the other, but they share their data. What
 ```clojure
 (require '[dk.simongray.podcast.app.library :as library])
 
-(let [{:keys [src position rate metadata]} (library/playback @lib id)]
-  (media/source! audio {:src src :position position :playback-rate rate})
+(let [{:keys [metadata] :as playback-state} (library/playback @lib id)]
+  (media/source! audio playback-state)
   (session/metadata! metadata))
 ```
 
