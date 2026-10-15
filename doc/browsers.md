@@ -125,6 +125,20 @@ rate within 1/16 and 16, and returns the rate that it refused, rather
 than throw in one engine and play at 20 times the speed in another.
 
 
+## Chapters as a track
+
+The chapters of the metadata reach only Chromium, which shows them only
+on ChromeOS. A chapters track is part of HTML instead, and every engine
+fires cuechange at a hidden one, even though none shows it. So the
+current chapter is the active cue of such a track.
+
+The track comes from a track element that `add!` makes, since a track
+from addTextTrack can never be removed, and would stay through every new
+source. The element loads a WebVTT file without cues, since one without
+a src fails to load, and the cues follow once it has loaded, since Chrome
+and WebKit drop the cues added before.
+
+
 ## Two answers about what plays
 
 Media Capabilities is the newer way to ask whether a browser can play a

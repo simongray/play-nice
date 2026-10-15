@@ -188,6 +188,34 @@ returns a function that stops it:
 
 The [reference](doc/reference.md) describes the state and every answer.
 
+Chapters and captions
+---------------------
+
+Only Chromium accepts the chapters of the metadata, but every browser
+follows a chapters track, which none of them shows. The `tracks`
+namespace adds one from the chapters, and `watch!` says which chapter
+plays, as the active cue of the track:
+
+```clojure
+(require '[dk.simongray.play-nice.tracks :as tracks])
+
+(def remove-chapters!
+  (tracks/add! audio {:kind :chapters
+                      :cues (tracks/chapter-cues chapters duration)}))
+
+(def stop!
+  (tracks/watch! audio #(swap! app assoc :tracks %)))
+;; :tracks is e.g. [{:kind :chapters :mode :hidden :active-cues
+;;                   [{:start-time 95 :end-time 1830 :text "News"}] …}]
+```
+
+For a video, `show!` shows the captions or subtitles that best fit the
+languages you prefer, and turns off the rest:
+
+```clojure
+(tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
+```
+
 What the browser can play
 -------------------------
 

@@ -309,6 +309,54 @@ rate that isn't finite leaves the rate as it was.
 | `:preserves-pitch` | `rate!` | False to let the pitch follow the rate |
 
 
+## Text tracks
+
+The `tracks` namespace follows the
+[text tracks](https://html.spec.whatwg.org/multipage/media.html#timed-text-tracks)
+of the HTML Living Standard, and the
+[VTTCue](https://www.w3.org/TR/webvtt1/#the-vttcue-interface) of the
+WebVTT Candidate Recommendation Draft of 20 May 2026.
+
+### Tracks
+
+What `text-tracks` returns for each track, and `watch!` passes on:
+
+| Key | Value |
+|---|---|
+| `:kind` | `:subtitles`, `:captions`, `:descriptions`, `:chapters` or `:metadata` |
+| `:label` | A string, "" by default |
+| `:language` | A BCP 47 tag, e.g. "en-GB", "" by default |
+| `:mode` | `:disabled`, `:hidden` or `:showing` |
+| `:active-cues` | A vector of the cues that are active now, none while the track is disabled |
+
+`add!` takes the same keys, but `:cues` for all the cues instead of
+`:active-cues`. Its `:kind` is `:subtitles` by default, and its `:mode`
+`:hidden`, which follows the cues without showing them.
+
+### Cues
+
+| Key | Value |
+|---|---|
+| `:start-time` | Seconds from the start. Required. |
+| `:end-time` | Seconds from the start. Required. |
+| `:text` | The text, e.g. the title of a chapter |
+| `:id` | A string, left out when it's empty |
+
+`add!` leaves out the cues that the browser refuses, e.g. one whose start
+time isn't finite. `chapter-cues` makes one cue of each chapter of the
+session's metadata, from its `:start-time` to the next chapter's, and
+from the last to the duration.
+
+### Choosing a track
+
+`show!` takes a map of the `:kinds` and the `:languages` that you accept,
+each in the order you prefer. It shows the first track that matches,
+trying each kind for a language before the next language, and turns off
+the other tracks of those kinds. A language matches its regional
+variants, e.g. "en" matches "en-GB". Without `:languages`, no track
+matches, and all of those kinds turn off.
+
+
 ## Autoplay
 
 The `autoplay` namespace follows the
@@ -401,6 +449,18 @@ every rate within 1/16 and 16:
 | Above 0 and below 1/16, or above 16 | NotSupportedError | Accepted | Accepted |
 | Below 0 | NotSupportedError | NotSupportedError | Accepted |
 | A default rate outside 1/16 to 16 | Ignored | Kept within 1/16 and 16, or an exception below 0 | Accepted |
+
+### Text tracks
+
+| | Chrome | Firefox | WebKit |
+|---|---|---|---|
+| cuechange on a hidden track | Fires | Fires | Fires |
+| Cues added to a track element before it has loaded | Lost at the load | Kept | Lost at the load |
+| A track element without a src | Fails to load, but takes cues | Fails to load, but takes cues | Fails to load, but takes cues |
+| The last cue, at the end of the media | Stays active | Ends | Ends |
+| Removing the track element | Removes the track | Removes the track | Removes the track |
+
+`add!` adds its cues once the track element has loaded.
 
 
 ## Browser support
