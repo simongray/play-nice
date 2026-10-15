@@ -69,16 +69,15 @@ Add the latest release from
 your `deps.edn`:
 
 ```clojure
-dk.simongray/play-nice {:mvn/version "0.1.0"}
+dk.simongray/play-nice {:mvn/version "0.2.0"}
 ```
 
-This README describes `master`, which has changed a lot since 0.1.0,
-and the docs of 0.1.0 are on
-[cljdoc](https://cljdoc.org/d/dk.simongray/play-nice). To use `master`,
-give a Git dependency with the SHA of its latest commit instead, and set
-`:deps true` in your `shadow-cljs.edn`, since
+For changes since the latest release, give a Git dependency with the SHA
+of the latest commit on `master` instead, and set `:deps true` in your
+`shadow-cljs.edn`, since
 [shadow-cljs](https://github.com/thheller/shadow-cljs) only reads Git
-dependencies from `deps.edn`.
+dependencies from `deps.edn`. The docstrings of each release are on
+[cljdoc](https://cljdoc.org/d/dk.simongray/play-nice).
 
 The [quickstart](doc/quickstart.md) puts a player on the lock screen in a
 new project, and [Build a player with your own controls](doc/own-controls.md)

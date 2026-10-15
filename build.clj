@@ -30,7 +30,7 @@
 
 (def version
   "The version to build; bump it with each release on GitHub."
-  "0.1.0")
+  "0.2.0")
 
 (def class-dir
   "Where the jar's contents are staged."
@@ -68,7 +68,7 @@
                             :connection          "scm:git:git://github.com/simongray/play-nice.git"
                             :developerConnection "scm:git:ssh://git@github.com/simongray/play-nice.git"
                             :tag                 (str "v" version)}
-                :pom-data  [[:description "A ClojureScript library that puts what a web page plays on the lock screen, and tells which files the browser can play."]
+                :pom-data  [[:description "An idiomatic ClojureScript API for audio and video in the browser: the media element, the lock screen, Picture-in-Picture, fullscreen, casting and captions."]
                             [:url scm-url]
                             [:licenses
                              [:license
