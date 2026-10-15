@@ -169,7 +169,9 @@
   (let [^js el (element {})]
     (is (= {:volume 0.5} (media/volume! el 0.5)))
     (is (= {:volume 0.125} (media/volume! el 0.5 {:curve :cubic})))
-    (is (= 0.5 (media/level el :cubic)) "the slider's level back")
+    ;; Math.cbrt in WebKit on Linux is an ulp off
+    (is (< (abs (- 0.5 (media/level el :cubic))) 1e-9)
+        "the slider's level back")
     (is (= 0.125 (media/level el)))
     (is (= {:volume 1} (media/volume! el 2)) "within 0 and 1")
     (is (= {:volume 0} (media/volume! el -1)))
