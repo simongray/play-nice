@@ -24,6 +24,17 @@
                  (.addEventListener element event resolve #js {:once true})
                  (js/setTimeout #(reject (str "no " event " in 10 s")) 10000))))
 
+(defn within
+  "The `promise`, or a promise rejected after `seconds` without an answer,
+  e.g. where an engine never settles a fullscreen request, named by the
+  `label`, so that a test fails rather than hangs."
+  [seconds label promise]
+  (js/Promise.race
+   #js [promise
+        (js/Promise. (fn [_ reject]
+                       (js/setTimeout #(reject (str label ": no answer in " seconds " s"))
+                                      (* 1000 seconds))))]))
+
 (defn silence
   "An object URL of a WAV file that holds a second of silence, as 8000
   samples of 8 bits."
