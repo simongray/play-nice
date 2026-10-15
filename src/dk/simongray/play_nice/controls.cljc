@@ -72,6 +72,24 @@
                   {:action :seekto :seek-time duration})})
 
 #?(:cljs
+   (defn pointer-seek
+     "The details of a seek to the point of a seek bar that the pointer
+     event `e` is at, for a media element in `state`, a map of its
+     :duration, e.g. {:action :seekto :seek-time 1830}, or nil while the
+     duration is unknown or infinite.
+
+     The bar is the element that listens for `e`, its current target. A
+     point past either end seeks to that end, e.g. as a drag under pointer
+     capture leaves the bar."
+     [^js e {:keys [duration] :as state}]
+     (let [^js rect (some-> e .-currentTarget .getBoundingClientRect)]
+       (when (and rect (js/Number.isFinite duration) (pos? (.-width rect)))
+         {:action    :seekto
+          :seek-time (* duration
+                        (max 0 (min 1 (/ (- (.-clientX e) (.-left rect))
+                                         (.-width rect)))))}))))
+
+#?(:cljs
    (defn- foreign?
      "Whether the keydown `e` belongs to something other than the shortcuts:
      a key with Alt, Ctrl or Meta, one that a handler took already, typing

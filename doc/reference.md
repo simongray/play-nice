@@ -559,6 +559,13 @@ the locale you give, or else in the language of the page, from the
 minutes, 30 seconds" or "12 minutter og 30 sekunder". It writes English
 where it can't, as on the JVM.
 
+`pointer-seek` returns the details of a seek to where a pointer event
+is on the seek bar that listens for it, e.g. `{:action :seekto
+:seek-time 1830}`, so that a click on the bar presses the same handler
+as the lock screen's scrubber. A point past either end of the bar seeks
+to that end, and it returns nil while the duration is unknown or
+infinite.
+
 
 ## Picture-in-Picture
 

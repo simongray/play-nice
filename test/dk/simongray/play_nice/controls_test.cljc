@@ -16,6 +16,17 @@
     (is (= {:action :seekto :seek-time 0} (press "Home")))
     (is (= {:action :seekto :seek-time 3600} (press "End")))))
 
+#?(:cljs
+   (deftest seeking-at-the-pointer
+     (let [bar   #js {:getBoundingClientRect (fn [] #js {:left 100 :width 200})}
+           at    #(controls/pointer-seek #js {:currentTarget bar :clientX %1}
+                                         {:duration %2})]
+       (is (= {:action :seekto :seek-time 900} (at 150 3600)))
+       (is (= {:action :seekto :seek-time 0} (at 50 3600)) "before the bar, its start")
+       (is (= {:action :seekto :seek-time 3600} (at 400 3600)) "past it, its end")
+       (is (nil? (at 150 nil)) "nothing before the metadata")
+       (is (nil? (at 150 ##Inf)) "nor in a live stream"))))
+
 (deftest the-value-text
   (is (= "12 minutes, 30 seconds" (controls/value-text 750 "en")))
   (is (= "1 hour, 5 seconds" (controls/value-text 3605.9 "en")))

@@ -170,7 +170,8 @@ so you give `listen!` the element that holds the player. A seek bar of
 your own takes its
 [ARIA attributes](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
 from `seek-aria`, so that a screen reader reads the position in words in
-the user's language:
+the page's language, and `pointer-seek` turns a click or a drag on it
+into the seek that the lock screen's scrubber asks for:
 
 ```clojure
 (require '[dk.simongray.play-nice.controls :as controls])

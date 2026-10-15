@@ -7,18 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### A seek bar needs the time under the pointer
-
-`seek-aria` and `seek-bar-keys` cover the slider's attributes and keys,
-but a click on the bar needs the time at the pointer, which the inspector
-works out from `getBoundingClientRect`. Dragging needs pointer capture on
-top. Every seek bar of its own needs this.
-
-- **Library:** a function from a pointer event on the bar and the
-  duration to the details of a seekto, e.g. `{:action :seekto :seek-time
-  1830}`, and the tutorial on your own controls could use it for
-  dragging too.
-
 ### `listen!` takes the handlers as they are at the call
 
 The inspector's handlers close over the episode that plays, so it starts
@@ -100,6 +88,11 @@ plays everywhere.
 - A volume slider needed the level of a state, but `level` took only
   the element, so the inspector's view applied the curve from `curves`
   itself. `level` now takes the state too, as `seek-aria` does.
+- A seek bar needed the time under the pointer, which the inspector
+  worked out from `getBoundingClientRect`. `controls/pointer-seek` now
+  turns a pointer event on the bar and the element's state into the
+  details of a seekto, which press the lock screen's handler, and the
+  tutorial on your own controls drags with it under pointer capture.
 
 ## What worked as designed
 

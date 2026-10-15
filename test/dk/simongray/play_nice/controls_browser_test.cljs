@@ -16,6 +16,17 @@
     (.appendChild js/document.body p)
     p))
 
+(deftest a-pointer-on-the-seek-bar
+  (let [^js bar (js/document.createElement "div")
+        seeks   (atom [])]
+    (set! (.. bar -style -cssText) "position:fixed;left:100px;top:0;width:200px;height:10px")
+    (.appendChild js/document.body bar)
+    (.addEventListener bar "pointerdown"
+                       #(swap! seeks conj (controls/pointer-seek % {:duration 3600})))
+    (.dispatchEvent bar (js/PointerEvent. "pointerdown" #js {:clientX 150 :clientY 5 :bubbles true}))
+    (is (= [{:action :seekto :seek-time 900}] @seeks))
+    (.remove bar)))
+
 (deftest the-language-of-the-page
   (let [^js html js/document.documentElement
         lang     (.-lang html)]

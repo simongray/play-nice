@@ -17,7 +17,8 @@ controls of its own, and our controls next to it:
     <meta charset="utf-8">
     <title>My player</title>
     <style>
-      #seek-bar { height: 12px; background: #ddd; cursor: pointer; }
+      #seek-bar { height: 12px; background: #ddd; cursor: pointer;
+                  touch-action: none; }
       #progress { height: 100%; width: 0; background: #333; }
     </style>
   </head>
@@ -76,13 +77,20 @@ Replace `src/player/core.cljs` with this:
     (media/play! audio {:muted-fallback true})
     (media/pause! audio)))
 
-(defn seek-to-pointer!
-  "Seek the `audio` element to the point of the seek bar that the pointer
-  event `e` presses."
-  [^js audio ^js e]
-  (let [rect (.getBoundingClientRect (by-id "seek-bar"))]
-    (media/seek! audio (* (.-duration audio)
-                          (/ (- (.-clientX e) (.-left rect)) (.-width rect))))))
+(defn drag!
+  "Seek the `audio` element where the pointer event `e` presses or drags
+  the seek bar, with the seekto handler of the lock screen in `handlers`,
+  roughly while it drags."
+  [^js audio handlers ^js e]
+  (let [^js bar (.-currentTarget e)
+        id      (.-pointerId e)]
+    (when (= "pointerdown" (.-type e))
+      ;; the bar gets the pointer's moves while it's pressed, even off it
+      (.setPointerCapture bar id))
+    (when-let [details (and (.hasPointerCapture bar id)
+                            (controls/pointer-seek e (media/state audio)))]
+      ((:seekto handlers)
+       (assoc details :fast-seek (= "pointermove" (.-type e)))))))
 
 (defn init
   "Play track.mp3 from where the listener left off, with our controls."
@@ -101,7 +109,8 @@ Replace `src/player/core.cljs` with this:
     (controls/listen! (by-id "seek-bar") audio handlers
                       {:keymap controls/seek-bar-keys})
     (.addEventListener (by-id "play") "click" #(toggle! audio))
-    (.addEventListener (by-id "seek-bar") "pointerdown" #(seek-to-pointer! audio %))))
+    (doseq [event ["pointerdown" "pointermove" "pointerup"]]
+      (.addEventListener (by-id "seek-bar") event #(drag! audio handlers %)))))
 ```
 
 `source!` loads the track at the position of the last visit, which the
@@ -116,7 +125,10 @@ The handlers of `element-actions` are those of the lock screen, which
 `attach!` sets with `:actions`. The keyboard presses them too: `listen!`
 follows the keys pressed in the player, e.g. `k` to play and pause and
 `l` to skip forward, and those of the seek bar, e.g. the arrow keys to
-move a second.
+move a second. So does the pointer: `pointer-seek` turns a press of the
+seek bar into the details that the lock screen's scrubber sends, and
+while the pointer drags, they ask for a fast seek, which lands near the
+point but sooner.
 
 `play!` answers `{:playing true :muted true}` where the browser only lets
 the page play muted, e.g. before the listener has clicked. Here the
@@ -131,8 +143,8 @@ clojure -M -m shadow.cljs.devtools.cli watch app
 ```
 
 Open <http://localhost:8080> in Chrome, and press Play. The button turns
-into Pause, and the bar fills as the track plays. Click the bar to jump,
-or press Tab to move to it and use the arrow keys, Page Up and Page Down,
+into Pause, and the bar fills as the track plays. Click or drag the bar
+to jump, or press Tab to move to it and use the arrow keys, Page Up and Page Down,
 Home and End. A screen reader reads its position in words, e.g. "1
 minute, 5 seconds". Chrome's media controls show the track, with buttons
 that skip 15 seconds back and 30 forward.
