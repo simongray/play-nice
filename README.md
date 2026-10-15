@@ -240,6 +240,30 @@ Chrome on a desktop also has a Picture-in-Picture button in its media
 controls, which calls the session's `:enterpictureinpicture` handler,
 e.g. `(fn [_] (pip/enter! video))`.
 
+Casting and AirPlay
+------------------
+
+The `remote-playback` namespace shows the browser's picker of devices,
+e.g. a Chromecast or an Apple TV, and follows the connection to one.
+Firefox has no casting, so there `prompt!` answers
+`{:refused :not-supported}`:
+
+```clojure
+(require '[dk.simongray.play-nice.remote-playback :as remote])
+
+(def stop!
+  (remote/watch! audio #(swap! app assoc :remote %)))
+;; :remote is e.g. {:availability :available :state :disconnected}
+
+;; in the click handler of a cast button
+(-> (remote/prompt! audio)
+    (.then prn))
+;; prints {:state :connecting}, or e.g. {:refused :dismissed}
+```
+
+Show the cast button only while `:availability` is `:available`, or also
+`:unknown`, since some browsers look for devices only in their picker.
+
 Keyboard and seek bar
 ---------------------
 

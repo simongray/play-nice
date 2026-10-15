@@ -442,6 +442,38 @@ What `watch!` passes on, at each enter, resize of the window and leave:
 | `:width`, `:height` | The size of the window in pixels, while it's in it |
 
 
+## Remote Playback
+
+The `remote-playback` namespace follows the
+[Remote Playback API](https://www.w3.org/TR/remote-playback/) Candidate
+Recommendation Draft of 30 April 2024, and WebKit's AirPlay events.
+
+### State
+
+What `watch!` passes on:
+
+| Key | Value |
+|---|---|
+| `:availability` | `:available` or `:unavailable`, as the browser says, and `:unknown` until it has said, or where it looks for devices only in its picker |
+| `:state` | `:disconnected`, `:connecting` or `:connected` |
+
+### Answers
+
+What the promise of `prompt!` resolves to:
+
+| Answer | When | From |
+|---|---|---|
+| `{:state :connecting}` | The user picked a device, and the state is as `state` returns it | |
+| `{:refused :not-allowed}` | The call wasn't in a click handler | InvalidAccessError |
+| `{:refused :dismissed}` | The user closed the picker | NotAllowedError |
+| `{:refused :no-devices}` | There's no device to pick | NotFoundError |
+| `{:refused :disabled}` | The element has `disableremoteplayback` | InvalidStateError |
+| `{:refused :not-supported}` | The browser has no Remote Playback, e.g. Firefox | NotSupportedError |
+
+`disable!` sets `disableremoteplayback` and removes `x-webkit-airplay`,
+whose value "allow" lets a video on an iPhone use AirPlay all the same.
+
+
 ## Autoplay
 
 The `autoplay` namespace follows the
@@ -574,6 +606,22 @@ and `watch!` followed it in and out:
 
 The iOS simulator has no Picture-in-Picture either: it refuses every video
 with NotSupportedError, although an iPhone has it.
+
+### Remote Playback
+
+Tried on 15 October 2026 through Playwright, and in the iOS simulator, on
+a network with an AirPlay device:
+
+| | Chrome | Firefox | WebKit | Safari on iOS |
+|---|---|---|---|---|
+| `remote` | Yes | No | Yes | Yes |
+| The availability | Unavailable | – | Unavailable, then available | Unavailable |
+| `prompt()` without a click | InvalidAccessError, or sometimes NotAllowedError | – | InvalidAccessError, or NotSupportedError without a source | InvalidAccessError |
+| `prompt()` with `disableremoteplayback` | InvalidStateError | – | InvalidStateError | InvalidStateError |
+| WebKit's AirPlay events | No | No | Yes | Yes |
+
+Nothing was cast, since that takes a click in a picker, and would have
+played on someone's device.
 
 ### Safari on iOS
 

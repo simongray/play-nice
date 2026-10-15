@@ -175,6 +175,20 @@ called it counts only while it's handled. Only a video without its
 metadata waits for it first, as Media Chrome does.
 
 
+## Casting in two vocabularies
+
+Remote Playback names the refusals of its picker in a way of its own:
+InvalidAccessError without a click, and NotAllowedError for a picker that
+the user closed. So `prompt!` answers `:not-allowed` for the first, as
+`play!` and Picture-in-Picture do, and `:dismissed` for the second. The
+engines don't keep to it either, e.g. Chrome sometimes says that a picker
+it never showed was dismissed.
+
+WebKit also fires its older AirPlay events, and Video.js drives its
+AirPlay button from them, since it finds the standard events unreliable
+in Safari. So `watch!` follows both, and the last word wins.
+
+
 ## Two answers about what plays
 
 Media Capabilities is the newer way to ask whether a browser can play a
@@ -206,8 +220,6 @@ string into "null", while a missing member gets its default.
   needs it to show a Web Audio player on the lock screen, which
   [How to put a Web Audio player on the lock screen](web-audio.md) does
   by hand.
-- **Remote Playback.** It matters for casting, and waits until an app
-  wants it.
 - **Document Picture-in-Picture, Media Source Extensions and Encrypted
   Media Extensions.** They're about windows, streaming and DRM rather
   than a player's place in the system.
