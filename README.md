@@ -401,6 +401,22 @@ the lock screen rather than the whole file:
                                               (fragment/time (.-src audio)))})
 ```
 
+Embedding a player
+------------------
+
+A page that embeds a player from another site in an iframe has to allow
+it to go fullscreen, and in Chrome to autoplay, in the iframe's `allow`
+attribute. Build the attribute with `embed/allow`:
+
+```clojure
+(require '[dk.simongray.play-nice.embed :as embed])
+
+(embed/allow {:autoplay true :fullscreen true :picture-in-picture true})
+;; => "autoplay; fullscreen; picture-in-picture"
+```
+
+Every engine reads `allow`, so the older `allowfullscreen` isn't needed.
+
 What the browser can play
 -------------------------
 

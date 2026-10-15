@@ -268,6 +268,8 @@ string into "null", while a missing member gets its default.
   needs it to show a Web Audio player on the lock screen, which
   [How to put a Web Audio player on the lock screen](web-audio.md) does
   by hand.
+- **Player.js.** Its messages let a page drive a player in an iframe,
+  which serves the sites that embed players more than the players.
 - **Document Picture-in-Picture, Media Source Extensions and Encrypted
   Media Extensions.** They're about windows, streaming and DRM rather
   than a player's place in the system.

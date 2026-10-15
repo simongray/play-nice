@@ -668,6 +668,24 @@ transient activation, and otherwise at the first of
 | `:window` | The window to ask and to listen at, e.g. a stand-in in a test. The page's by default. |
 
 
+## Embedding
+
+The `embed` namespace follows the
+[Permissions Policy](https://www.w3.org/TR/permissions-policy-1/)
+Working Draft of 22 September 2026.
+
+`allow` builds an iframe's allow attribute from a map of each feature to
+who may use it in the frame:
+
+| Value | In the attribute | Who |
+|---|---|---|
+| `true` | `fullscreen` | The frame's own origin, i.e. that of its `src` |
+| `"*"` | `fullscreen *` | Any origin the frame goes to |
+| `:none` | `fullscreen 'none'` | No one |
+| `["https://player.example"]` | `fullscreen https://player.example` | Those origins |
+| `false` or `nil` | | Left out, so the feature's default applies |
+
+
 ## What each engine refuses
 
 Tried on 12 October 2026 in Chrome 153, Firefox 157 and WebKit 27.2,
@@ -837,6 +855,21 @@ A file with `#t=0.5`, over HTTP or as a blob URL, tried on 15 October
 | | Chrome | Firefox | WebKit | Safari on iOS |
 |---|---|---|---|---|
 | Starts at the fragment's start | By `loadedmetadata` | By `loadedmetadata` | After `loadedmetadata`, with `seeked` | Once it plays |
+
+### Embedding
+
+What the document of an iframe from another origin reports, tried on 15
+October 2026 through Playwright, in Safari 26.3, and in the iOS
+simulator:
+
+| `allow` | Chrome | Firefox | WebKit and Safari | Safari on iOS |
+|---|---|---|---|---|
+| None | No fullscreen | No fullscreen | No fullscreen | No fullscreen of an element anyway |
+| `fullscreen`, `fullscreen *` or `allowfullscreen` | Fullscreen | Fullscreen | Fullscreen | – |
+| `fullscreen 'none'` with `allowfullscreen` | No fullscreen | No fullscreen | No fullscreen | – |
+| `picture-in-picture 'none'` | No Picture-in-Picture | No Picture-in-Picture | Picture-in-Picture all the same | – |
+
+Chrome 153 doesn't know `media-playback-while-not-visible` yet.
 
 ### Safari on iOS
 
