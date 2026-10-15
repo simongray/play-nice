@@ -5,24 +5,9 @@ play-nice 0.2.0: what was awkward, why, and what play-nice could change.
 The inspector renders with Replicant and keeps its state in one atom, so
 it's a fair test of an app that isn't re-frame.
 
-## Open
-
-### Feeds call Ogg Opus audio/opus, which no engine accepts
-
-The item page asks the browser about each file of an episode. Buzzsprout
-declares its Opus files as `audio/opus`, and Chrome 155, Firefox 157 and
-WebKit 27.2 all answer no to that type, from `canPlayType` and from Media
-Capabilities alike. The files are Ogg, and all three engines play
-`audio/ogg; codecs="opus"`. So the page said "won't play" of a file that
-plays everywhere.
-
-- **podcast-clj:** `resolve/decoding-configuration` turns the feed's type
-  into the content type, so it should write `audio/opus` as
-  `audio/ogg; codecs="opus"`. play-nice's `decoding-info!` now does the
-  same, as Fixed says, but a user of podcast-clj may ask the browser
-  without it.
-
 ## Fixed
+
+Every note is fixed, in play-nice or in podcast-clj.
 
 - `tracks/watch!` threw in jsdom, whose text tracks fire no events, and
   the inspector's jsdom test crashed. It now does nothing there, as the
@@ -76,11 +61,14 @@ plays everywhere.
   Firefox 157 refuses, so `add!` writes it as the largest number, and
   `cues` reads that back as `##Inf`.
 - Every engine refused `audio/opus`, which feeds and servers write for
-  Ogg Opus. Asked about the types in the corpus, all three engines also
-  refused `audio/m4a`, Chrome and Firefox `audio/mpeg3`, and Firefox
-  `audio/x-mp3`, though they play those files. `decoding-info!` now asks
-  about each of these by the name that the engines know, from
-  `capabilities/type-aliases`.
+  Ogg Opus, so the item page said "won't play" of a Buzzsprout file that
+  plays everywhere. Asked about the types in podcast-clj's corpus, all
+  three engines also refused `audio/m4a`, Chrome and Firefox
+  `audio/mpeg3`, and Firefox `audio/x-mp3`, though they play those
+  files. `decoding-info!` now asks about each of these by the name that
+  the engines know, from `capabilities/type-aliases`, and podcast-clj's
+  `resolve/decoding-configuration` writes them so too, for its users
+  that ask the browser without play-nice.
 
 ## What worked as designed
 
