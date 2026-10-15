@@ -308,10 +308,12 @@ npx playwright install firefox webkit  # once, for the browsers
 clojure -M:cljs compile test           # the tests in Node
 clojure -M:cljs release browser-test   # the tests for a browser
 node test/browsers.mjs                 # in Chrome, Firefox and WebKit
+node test/simulator.mjs                # in Safari on an iOS simulator
 ```
 
 The browser tests play a real media element, and record each call on a
 stand-in session, which can throw as Safari does. The last command runs
 them in your Chrome and in Playwright's Firefox and WebKit, as CI does.
 They compile with `release`, for advanced optimizations, which is where
-a missing `^js` hint would show.
+a missing `^js` hint would show. With Xcode, the same build also runs in
+Safari on an iPhone simulator, which CI doesn't do.

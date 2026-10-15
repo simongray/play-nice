@@ -58,7 +58,8 @@
             (is (= :src-not-supported (:code (:error state))))))))
 
 (deftest playing-with-sound
-  (let [^js a (js/document.createElement "video")]
+  (let [^js a (doto (js/document.createElement "video")
+                (set! -playsInline true))]
     (media/source! a {:src (silence)})
     (run #(.then (media/play! a {:muted-fallback true})
                  (fn [answer]
@@ -113,9 +114,10 @@
             (.pause v)
             paused)
          #(is (true? (:paused (last @states))))
+         ;; the rate, since an iPhone locks the volume
          #(let [n       (count @states)
-                changed (next-event v "volumechange")]
+                changed (next-event v "ratechange")]
             (@stop!)
-            (set! (.-volume v) 0.5)
+            (set! (.-playbackRate v) 2)
             (.then changed
                    (fn [_] (is (= n (count @states)) "until it stops")))))))

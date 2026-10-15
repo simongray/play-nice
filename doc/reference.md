@@ -512,10 +512,37 @@ every rate within 1/16 and 16:
 | Cues added to a track element before it has loaded | Lost at the load | Kept | Lost at the load |
 | A track element without a src | Fails to load, but takes cues | Fails to load, but takes cues | Fails to load, but takes cues |
 | The last cue, at the end of the media | Stays active | Ends | Ends |
-| The active cues after a seek | Changed by seeked | Changed by seeked | Changed later, by a cuechange |
+| The active cues after a seek | Changed by seeked | Changed by seeked | Changed by seeked, but later just after the track has loaded |
 | Removing the track element | Removes the track | Removes the track | Removes the track |
 
 `add!` adds its cues once the track element has loaded.
+
+### Safari on iOS
+
+Tried on 15 October 2026 in Safari on an iPhone 17 simulator with iOS
+26.3, where every browser test passes:
+
+- The volume is locked, so setting it changes nothing and fires no
+  volumechange.
+- An element that hasn't played doesn't seek: seeked waits until it
+  plays, although `currentTime` returns the new position at once. So a
+  hidden track's active cues don't change either.
+- A seek to 0.5 seconds of a WAV file lands at about 0.511.
+
+### The back/forward cache
+
+Tried on 15 October 2026 with a page that plays a muted video, declares
+"playing" and goes to another page and back, in the browsers themselves:
+
+| | Chrome 153 | Firefox 158 | Safari 26.3 | Safari on iOS 26.3 |
+|---|---|---|---|---|
+| The page | Restored from the cache | Restored | Restored | Restored |
+| The video afterwards | Paused, with a pause event after pageshow | Still playing, without events | Still playing, without events | Still playing, without events |
+| The metadata and the declared playback state | Kept | Kept | Kept | Kept |
+
+Under Playwright, Chrome played the video again after the restore, with
+a play event. Wherever the video's state changes, it fires the event, so
+`attach!` keeps the lock screen in step without a pageshow handler.
 
 
 ## Browser support

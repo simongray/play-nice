@@ -60,7 +60,8 @@
 
 (defn muted-video
   "A muted video element, since Chrome plays only a muted video without a
-  click."
+  click, which plays inline, since an iPhone plays others fullscreen."
   []
   (doto (js/document.createElement "video")
-    (set! -muted true)))
+    (set! -muted true)
+    (set! -playsInline true)))

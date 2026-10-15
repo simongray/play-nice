@@ -82,6 +82,16 @@ follows Android's Media3: it goes to the item before within the first 3
 seconds, and otherwise to the start of the item.
 
 
+## The back/forward cache needs nothing more
+
+A page restored from the back/forward cache may find its video paused or
+still playing, depending on the browser. But where the browser changes
+the video's state, it fires the video's event, and `attach!` follows
+that, so the lock screen stays right without a pageshow handler. Only a
+page that declares the playback state by hand needs to check it at
+pageshow.
+
+
 ## A failed element is paused
 
 A fatal error fires only `error` at the media element, and leaves

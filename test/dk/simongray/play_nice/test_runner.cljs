@@ -12,7 +12,12 @@
 
 (defmethod test/report [::test/default :end-run-tests]
   [{:keys [fail error] :as counters}]
-  (set! (.-title js/document) (str fail " failures, " error " errors")))
+  (set! (.-title js/document) (str fail " failures, " error " errors"))
+  ;; for test/simulator.mjs, which can't read the page of a simulator
+  (when (= "?report" (.-search js/location))
+    (js/fetch "/report" #js {:method "POST"
+                             :body   (str (.-textContent (js/document.querySelector "pre"))
+                                          "\n" (.-title js/document))})))
 
 (defn start
   "Run every test namespace of the build."

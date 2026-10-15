@@ -32,7 +32,8 @@
          (js/setTimeout #(resolve false) 2000)
          (set! (.-currentTime element) t))))))
 
-;; seeks rather than playback, which a Linux engine in CI didn't finish
+;; seeks rather than playback, which WebKit on Linux didn't finish, after a
+;; play and a pause, since iOS doesn't seek an element before it has played
 (deftest following-the-chapters
   (let [^js v   (muted-video)
         states  (atom [])
@@ -51,6 +52,8 @@
               (js/Promise.all #js [(loaded v)
                                    (next-event v "loadedmetadata")]))
          #(is (= 2 (.-length (.-cues ^js (aget (.-textTracks v) 0)))))
+         #(.play v)
+         #(.pause v)
          #(seek v 0.75 "B")
          #(is (= "B" (chapter)) "cuechange at a chapter, from a hidden track")
          #(seek v 0.25 "A")

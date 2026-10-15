@@ -114,11 +114,9 @@
   (let [calls   (atom [])
         opts    {:session     (recorder calls {})
                  :position-fn session/element-position}
-        ;; a video, since Chrome plays only a muted video without a click
-        ^js a   (js/document.createElement "video")
+        ^js a   (muted-video)
         detach! (atom nil)
         last-of (fn [kind] (last (filter #(= kind (first %)) @calls)))]
-    (set! (.-muted a) true)
     (set! (.-src a) (silence))
     (run #(reset! detach! (session/attach! a opts))
          #(is (= [[:playback-state "paused"] [:position nil]] @calls)
@@ -135,8 +133,8 @@
          #(let [seeked (next-event a "seeked")]
             (set! (.-currentTime a) 0.5)
             seeked)
-         ;; WebKit puts it a little past, e.g. at 0.50005
-         #(is (< (abs (- 0.5 (:position (second (last-of :position))))) 0.01)
+         ;; WebKit puts it a little past, e.g. at 0.50005, or 0.511 on iOS
+         #(is (< (abs (- 0.5 (:position (second (last-of :position))))) 0.02)
               "the position after a seek")
          #(let [changed (next-event a "ratechange")]
             (set! (.-playbackRate a) 2)
