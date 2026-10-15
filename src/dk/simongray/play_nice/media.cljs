@@ -360,8 +360,8 @@
   - [:source m], source!
   - [:switch-source src], switch-source!
 
-  An effect of another kind answers {:refused :unknown-effect}, so you can
-  apply your own, e.g. as a re-frame effect:
+  An effect of another kind does nothing, and answers {:refused
+  :unknown-effect}. In re-frame, register apply! as an effect:
 
       (rf/reg-fx :media #(media/apply! audio %))
 

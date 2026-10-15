@@ -143,9 +143,9 @@ in a crossfade, or a clip of a longer file:
 (session/attach! audio {:position-fn session/element-position})
 ```
 
-The function takes the element's `:duration`, `:current-time`,
-`:playback-rate`, `:paused` and `:error`, and returns the position
-state, e.g. `{:duration 3600 :playback-rate 1.5 :position 754}`. For a
+The function takes the element's state, as `media/state` gives it, and
+returns the position state, e.g. `{:duration 3600 :playback-rate 1.5
+:position 754}`. For a
 player without a media element, e.g. on Web Audio, call `position!` and
 `playback-state!` yourself, as
 [How to put a Web Audio player on the lock screen](doc/web-audio.md)
@@ -190,6 +190,15 @@ returns a function that stops it:
 ;;                  :duration 3600 :playback-rate 1.5 …}
 ```
 
+The state changes at a pause, a seek or a new rate, but not at each
+`timeupdate`, which fires several times a second while the element
+plays. For a seek bar that moves as it plays, follow that event too:
+
+```clojure
+(media/watch! audio #(swap! app assoc :player %)
+              {:events (conj media/events "timeupdate")})
+```
+
 Where your effects are data, as in re-frame or Nexus, `apply!` does
 what each one names, in order, and returns a promise of the answers. An
 effect is a keyword and the arguments of the function that it names:
@@ -221,13 +230,18 @@ plays, as the active cue of the track:
 
 (def remove-chapters!
   (tracks/add! audio {:kind :chapters
-                      :cues (tracks/chapter-cues chapters duration)}))
+                      :cues (tracks/chapter-cues chapters
+                                                 (.-duration audio))}))
 
 (def stop!
   (tracks/watch! audio #(swap! app assoc :tracks %)))
 ;; :tracks is e.g. [{:kind :chapters :mode :hidden :active-cues
 ;;                   [{:start-time 95 :end-time 1830 :text "News"}] …}]
 ```
+
+Add the track once the metadata has loaded, e.g. at `loadedmetadata`.
+The last chapter lasts until the duration, and before then the
+duration is NaN, so the browser would refuse that chapter's cue.
 
 For a video, `show!` shows the captions or subtitles that best fit the
 languages you prefer, and turns off the rest:

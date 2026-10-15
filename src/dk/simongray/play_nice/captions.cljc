@@ -140,7 +140,8 @@
      that removes the style again.
 
      The call adds the CSS of css to the video's document, for this video
-     alone. A later call for the same video replaces its style."
+     alone. A later call for the same video replaces its style, and the
+     earlier call's function then only removes that style's element."
      [^js video style]
      (if-let [^js document (.-ownerDocument video)]
        (let [^js element (.createElement document "style")

@@ -8,8 +8,11 @@
   first, and answers with one keyword for each cause:
 
       (-> (enter! video)
-          (.then #(swap! app assoc :pip %)))
-      ;; {:width 320 :height 180}, or e.g. {:refused :not-allowed}"
+          (.then prn))
+      ;; prints {:width 320 :height 180}, or e.g. {:refused :not-allowed}
+
+  To keep track of whether the video is in Picture-in-Picture, use
+  watch!, which also sees the user close the window."
   (:require [dk.simongray.play-nice.media :as media]))
 
 ;; W3C Picture-in-Picture, Working Draft of 16 June 2026

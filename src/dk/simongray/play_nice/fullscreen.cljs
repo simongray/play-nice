@@ -92,7 +92,7 @@
   - {:fullscreen :element} once the element is fullscreen
   - {:fullscreen :video} where only the video can be, e.g. on an iPhone
   - {:refused :not-allowed} without a click, or where the page may not,
-    e.g. in an iframe without allowfullscreen
+    e.g. in an iframe whose allow attribute leaves out fullscreen
   - {:refused :no-metadata} for a video without its metadata yet, which an
     iPhone can't show in its player
   - {:refused :not-supported} where neither can go fullscreen

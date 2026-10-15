@@ -87,7 +87,9 @@
 (defn chapter-cues
   "The cues of a chapters track for the `chapters` of a media of `duration`
   seconds, e.g. the :chapter-info of the session's metadata. Each chapter
-  lasts until the next one starts, and the last until the end:
+  lasts until the next one starts, and the last until the end, so give
+  the duration once it's known, since add! leaves out a cue that has no
+  finite end:
 
       (chapter-cues [{:title \"Intro\" :start-time 0}
                      {:title \"News\" :start-time 95}]

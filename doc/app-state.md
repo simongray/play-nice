@@ -93,9 +93,11 @@ isn't in the app's database:
     (session/actions! handlers)))
 
 (def handlers
-  "The buttons of the lock screen, as events."
+  "The buttons of the lock screen, as events. Keep :seekto, since
+  Safari's lock screen has no scrubber without it."
   {:play      #(rf/dispatch [:player/resume])
    :pause     #(rf/dispatch [:player/pause])
+   :seekto    #(rf/dispatch [:player/seek (:seek-time %)])
    :nexttrack #(rf/dispatch [:player/next])})
 
 (rf/reg-event-fx :player/play
@@ -107,8 +109,16 @@ isn't in the app's database:
 ```
 
 Attach the element in a ref callback, which React calls with nil when the
-element goes:
+element goes. Define it once, since React calls a new function at every
+render, and the element would be detached and attached each time:
 
 ```clojure
-[:audio {:ref #(if % (reset! detach! (session/attach! %)) (@detach!))}]
+(defn attach-audio!
+  "Attach the media `element` that React mounts, or detach it at nil."
+  [element]
+  (if element
+    (reset! detach! (session/attach! element))
+    (@detach!)))
+
+[:audio {:ref attach-audio!}]
 ```

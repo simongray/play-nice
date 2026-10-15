@@ -122,20 +122,21 @@ has them.
 
 ### The element map
 
-The functions that follow a media element take a map of its attributes,
-i.e. `element-position`, `element-state`, `seek-position` and the
-`:position-fn` of `attach!`:
+The functions that follow a media element take its state, as
+`media/state` gives it, i.e. `element-position`, `element-state`,
+`seek-position` and the `:position-fn` of `attach!`. They read these
+keys of it:
 
 | Key | Attribute |
 |---|---|
-| `:duration` | [`duration`](https://html.spec.whatwg.org/multipage/media.html#dom-media-duration), NaN until the metadata has loaded |
+| `:duration` | [`duration`](https://html.spec.whatwg.org/multipage/media.html#dom-media-duration), nil until the metadata has loaded |
 | `:current-time` | [`currentTime`](https://html.spec.whatwg.org/multipage/media.html#dom-media-currenttime) |
 | `:playback-rate` | [`playbackRate`](https://html.spec.whatwg.org/multipage/media.html#dom-media-playbackrate) |
 | `:paused` | [`paused`](https://html.spec.whatwg.org/multipage/media.html#dom-media-paused) |
 | `:error` | [`error`](https://html.spec.whatwg.org/multipage/media.html#dom-media-error), as a map of its `:code` and `:message`, or nil |
 
-`attach!` reads them at the events of `session/element-events`, and
-counts an element with an error as paused.
+`attach!` reads the state at the events of `session/element-events`,
+and counts an element with an error as paused.
 
 ### Options
 
@@ -620,7 +621,7 @@ What the promise of `enter!` resolves to:
 |---|---|
 | `{:fullscreen :element}` | The element is fullscreen |
 | `{:fullscreen :video}` | The browser can show only the video fullscreen, e.g. on an iPhone |
-| `{:refused :not-allowed}` | The call wasn't in a click handler, or the page may not, e.g. in an iframe without `allowfullscreen` |
+| `{:refused :not-allowed}` | The call wasn't in a click handler, or the page may not, e.g. in an iframe whose `allow` leaves out `fullscreen` |
 | `{:refused :no-metadata}` | On an iPhone, the video has no metadata yet |
 | `{:refused :not-supported}` | Neither can go fullscreen |
 
