@@ -6,7 +6,8 @@
   ;; recompiled at every build, since the test namespaces of the build are
   ;; compiled into it, as in shadow-cljs's own runner
   {:dev/always true}
-  (:require [cljs.test :as test]
+  (:require [clojure.string :as str]
+            [cljs.test :as test]
             [shadow.test :as st]
             [shadow.test.env :as env]))
 
@@ -19,12 +20,26 @@
                              :body   (str (.-textContent (js/document.querySelector "pre"))
                                           "\n" (.-title js/document))})))
 
+(defn early?
+  "Whether the test `var` is one of the capabilities tests, which run
+  first: in WebKit on Linux, as CI has it, the media tests play only after
+  the questions that these tests ask."
+  [var]
+  (str/includes? (str (:ns (meta var))) ".media.capabilities"))
+
 (defn start
-  "Run every test namespace of the build."
+  "Run every test namespace of the build, the capabilities tests first."
   []
   (-> (env/get-test-data)
       (env/reset-test-data!))
-  (st/run-all-tests))
+  ;; a block for each, since a block sorts its namespaces by name
+  (let [vars          (env/get-test-vars)
+        [early later] ((juxt filter remove) early? vars)]
+    (-> (st/prepare-test-run (test/empty-env) vars)
+        (into (st/test-vars-grouped-block early))
+        (into (st/test-vars-grouped-block later))
+        (st/finish-test-run)
+        (test/run-block))))
 
 (defn stop
   "Call `done` when the tests may be reloaded."
