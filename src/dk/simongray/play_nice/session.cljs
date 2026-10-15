@@ -333,6 +333,39 @@
 
 ;; §5 says only that stop stops playback, and Media3's Player.stop keeps
 ;; the position, as a listener who resumes later expects
+(defn action-effects
+  "The effects of media/apply! that the button press of `details` has on a
+  media element in `state`, as media/state gives it, with the `opts` of
+  element-actions, e.g. [[:seek 784]] for {:action :seekforward} at 754
+  with :seekforward 30. Play plays, pause and stop pause, and the seeks
+  go where seek-position says.
+
+  It's [] for an action that has no effect on the element, e.g. nexttrack
+  without :track-buttons :skips, or a seek without a time, so a re-frame
+  app can apply the effects of a press as data:
+
+      (rf/reg-fx :press
+        (fn [details]
+          (media/apply! audio (action-effects details
+                                              (media/state audio)
+                                              {:seekforward 30}))))"
+  [{:keys [action fast-seek] :as details}
+   state
+   {:keys [ignore-seek-offset track-buttons] :as opts}]
+  (let [skip    (when (= :skips track-buttons)
+                  ({:previoustrack :seekbackward :nexttrack :seekforward} action))
+        details (cond-> details
+                  skip               (assoc :action skip)
+                  ignore-seek-offset (dissoc :seek-offset))]
+    (case (:action details)
+      :play             [[:play]]
+      (:pause :stop)    [[:pause]]
+      (:seekto :seekbackward :seekforward)
+      (if-let [to (seek-position details state opts)]
+        [(cond-> [:seek to] fast-seek (conj {:fast true}))]
+        [])
+      [])))
+
 (defn element-actions
   "Handlers that play, pause, stop and seek the media `element` itself,
   with the `opts` below. Stop pauses the element where it is.
@@ -347,35 +380,20 @@
 
   Merge your own handlers over them before passing them to actions!. Keep
   seekto among them: Safari drops its own buttons once a page sets a
-  handler, so without seekto its lock screen has no scrubber."
+  handler, so without seekto its lock screen has no scrubber.
+
+  Each handler applies the effects that action-effects gives for the
+  element's state at the press."
   ([element]
    (element-actions element {}))
-  ([^js element {:keys [seekbackward seekforward ignore-seek-offset track-buttons]
-                 :as   opts}]
-   (let [go!    (fn [to fast?]
-                  (if (and fast? (fn? (.-fastSeek element)))
-                    (.fastSeek element to)
-                    (set! (.-currentTime element) to)))
-         seek!  (fn [{:keys [fast-seek] :as details}]
-                  (some-> (seek-position (cond-> details
-                                           ignore-seek-offset
-                                           (dissoc :seek-offset))
-                                         (media/state element)
-                                         opts)
-                          (go! fast-seek)))
+  ([^js element {:keys [seekbackward seekforward track-buttons] :as opts}]
+   (let [press! #(media/apply! element (action-effects % (media/state element) opts))
          skips? (= :skips track-buttons)]
-     (cond-> {:play   (fn [_] (media/play! element))
-              :pause  (fn [_] (media/pause! element))
-              :stop   (fn [_] (media/pause! element))
-              :seekto seek!}
-       seekbackward (assoc :seekbackward seek!)
-       seekforward  (assoc :seekforward seek!)
-
-       (and skips? seekbackward)
-       (assoc :previoustrack (comp seek! #(assoc % :action :seekbackward)))
-
-       (and skips? seekforward)
-       (assoc :nexttrack (comp seek! #(assoc % :action :seekforward)))))))
+     (cond-> {:play press! :pause press! :stop press! :seekto press!}
+       seekbackward               (assoc :seekbackward press!)
+       seekforward                (assoc :seekforward press!)
+       (and skips? seekbackward)  (assoc :previoustrack press!)
+       (and skips? seekforward)   (assoc :nexttrack press!)))))
 
 (defn attach!
   "Keep the Media Session in step with the media `element`, with the `opts`
@@ -387,15 +405,17 @@
     element itself.
   - :events, the events of the element to follow, by default
     element-events
+  - :actions, the options of element-actions, e.g. {:seekbackward 15
+    :seekforward 30}, to set the element's own handlers too
 
   The call watches the element with media/watch!, and sets the playback
   state and the position state that element-state returns for each new
-  state. Detaching stops that, clears the position state and declares the
-  playback state :none. Attaching another element detaches this one,
-  since a page has one session."
+  state. Detaching stops that, clears the position state, declares the
+  playback state :none, and clears the handlers with :actions. Attaching
+  another element detaches this one, since a page has one session."
   ([element]
    (attach! element {}))
-  ([^js element {:keys [position-fn events]
+  ([^js element {:keys [position-fn events actions]
                  :or   {position-fn (constantly nil)
                         events      element-events}
                  :as   opts}]
@@ -406,6 +426,8 @@
                    (position! position-state opts))]
        (when-let [previous (:detach @st)]
          (previous))
+       (when actions
+         (actions! (element-actions element actions) opts))
        (let [stop!   (media/watch! element
                                    (comp show! (partial element-state position-fn))
                                    {:events events})
@@ -414,6 +436,8 @@
                        (when (identical? detach! (:detach @st))
                          (stop!)
                          (show! {:playback-state :none})
+                         (when actions
+                           (actions! {} opts))
                          (swap! st dissoc :detach))
                        nil)]
          (swap! st assoc :detach detach!)

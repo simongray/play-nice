@@ -145,12 +145,16 @@ and counts an element with an error as paused.
 | `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
 | `:position-fn` | `attach!` | A function from the element's state, as `media/state` gives it, to the position state, e.g. `element-position`. Without it, the position state stays clear. |
 | `:events` | `attach!` | The events of the element to follow, `session/element-events` by default |
+| `:actions` | `attach!` | The options of `element-actions`, e.g. `{:seekbackward 15 :seekforward 30}`, to set its handlers too, which detaching clears |
 | `:seekbackward`, `:seekforward` | `element-actions` | The seconds of each skip, e.g. 15 and 30. A skip without them is left out. |
 | `:ignore-seek-offset` | `element-actions` | True to skip by those seconds even where the details have a `:seek-offset` |
 | `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the skips have their seconds |
 
 The `:stop` of `element-actions` pauses the element where it is, as
-Media3's `Player.stop` keeps the position.
+Media3's `Player.stop` keeps the position. Each of its handlers applies
+what `action-effects` returns for the press, the effects of
+`media/apply!` as data, e.g. `[[:seek 784]]` for a skip forward at 754,
+or `[]` for a press that doesn't touch the element.
 
 ### Support
 
@@ -380,6 +384,7 @@ that a locked volume doesn't fire.
 | `:muted-fallback` | `play!` | True to play muted where the browser refuses the sound |
 | `:preserves-pitch` | `rate!` | False to let the pitch follow the rate |
 | `:curve` | `volume!`, `level` | One of `curves`, `:linear` by default |
+| `:fast` | `seek!` | True to seek with `fastSeek` where the browser has it, which may land near the position, sooner |
 
 
 ## Text tracks

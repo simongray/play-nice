@@ -280,7 +280,11 @@
     (is (= {:current-time 754 :refused :not-finite} (media/seek! el ##Inf))
         "where the element would throw")
     (is (= {:current-time 754 :refused :not-finite} (media/seek! el nil))
-        "e.g. a duration before the metadata")))
+        "e.g. a duration before the metadata")
+    (let [fast (atom nil)]
+      (set! (.-fastSeek el) #(reset! fast %))
+      (is (= {:current-time 900} (media/seek! el 900 {:fast true})))
+      (is (= [900 754] [@fast (.-currentTime el)]) "with fastSeek, where it has it"))))
 
 (deftest applying-effects
   (let [^js el (player (constantly (js/Promise.resolve)))

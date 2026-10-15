@@ -357,15 +357,24 @@
 
 ;; §4.8.11.7: setting currentTime to a number that isn't finite throws
 (defn seek!
-  "Move the media `element` to the `position` in seconds, and return the
-  position as set, e.g. {:current-time 754}. A position that isn't a
-  finite number, e.g. a duration of nil before the metadata, leaves the
-  element where it was, and answers {:refused :not-finite}."
-  [^js element position]
-  (if (js/Number.isFinite position)
-    (do (set! (.-currentTime element) position)
-        {:current-time position})
-    {:current-time (.-currentTime element) :refused :not-finite}))
+  "Move the media `element` to the `position` in seconds, with the `opts`
+  below, and return the position as set, e.g. {:current-time 754}. A
+  position that isn't a finite number, e.g. a duration of nil before the
+  metadata, leaves the element where it was, and answers {:refused
+  :not-finite}.
+
+  - :fast, true to seek with fastSeek where the browser has it, which may
+    land near the position rather than on it, sooner, e.g. while a
+    scrubber is dragged"
+  ([element position]
+   (seek! element position {}))
+  ([^js element position {:keys [fast] :as opts}]
+   (if (js/Number.isFinite position)
+     (do (if (and fast (fn? (.-fastSeek element)))
+           (.fastSeek element position)
+           (set! (.-currentTime element) position))
+         {:current-time position})
+     {:current-time (.-currentTime element) :refused :not-finite})))
 
 (defn apply!
   "Apply the `effects` to the media `element` in order, and return a
@@ -377,7 +386,7 @@
 
   - [:play opts], play!
   - [:pause], pause!
-  - [:seek position], seek!
+  - [:seek position opts], seek!
   - [:rate x opts], rate!
   - [:volume level opts], volume!
   - [:muted muted?], muted!

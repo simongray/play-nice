@@ -50,18 +50,40 @@ dk.simongray/play-nice
 Since shadow-cljs only reads Git dependencies from `deps.edn`, set
 `:deps true` in your `shadow-cljs.edn` for that.
 
+Each namespace covers one part of a player, and most players start with
+`media` and `session`:
+
+| Namespace | For |
+|---|---|
+| `media` | Playing an audio or video element, its state as a map, and effects as data |
+| `session` | The lock screen and the headphone buttons |
+| `controls` | Keyboard shortcuts and a seek bar of your own |
+| `tracks` | Chapters and captions as text tracks |
+| `captions` | Captions in the user's style |
+| `autoplay` | The browser's autoplay policy, and the user's next click |
+| `viewport` | A muted video that plays while it's in view |
+| `picture-in-picture` | Picture-in-Picture of a video |
+| `fullscreen` | Fullscreen, also on an iPhone |
+| `remote-playback` | Casting and AirPlay |
+| `tabs` | One player at a time across the tabs of an app |
+| `wake-lock` | The screen kept on while the media plays |
+| `capabilities` | Which file of an episode the browser can play |
+| `fragment` | The times in media fragments and page links |
+| `embed` | The `allow` attribute of an iframe that embeds a player |
+| `schema` | Malli schemas of the maps |
+
 The namespaces of pure functions, `fragment`, `captions`, `controls`,
 `embed` and `schema`, also run on the JVM, e.g. to write a page on the
 server. Only `captions/style!` and `controls/listen!` need a browser.
 
 A player whose buttons just play, pause and seek the media element
-`audio` needs three calls:
+`audio` needs two calls:
 
 ```clojure
 (require '[dk.simongray.play-nice.session :as session])
 
 (def detach!
-  (session/attach! audio))
+  (session/attach! audio {:actions {:seekbackward 10 :seekforward 10}}))
 
 (session/metadata! {:title   "Blue in Green"
                     :artist  "Miles Davis"
@@ -69,16 +91,14 @@ A player whose buttons just play, pause and seek the media element
                     :artwork [{:src   "/covers/kind-of-blue-512.png"
                                :sizes "512x512"
                                :type  "image/png"}]})
-
-(session/actions! (session/element-actions audio {:seekbackward 10
-                                                  :seekforward  10}))
 ```
 
 Call `metadata!` again for each new track, with nil when nothing plays,
 and `(detach!)` when the player goes away. The
 [quickstart](doc/quickstart.md) builds such a player from an empty
-project. To follow the state of an app, e.g. in an atom or with
-re-frame, see
+project, and [Build a player with your own controls](doc/own-controls.md)
+adds a play button, a seek bar and keyboard shortcuts. To follow the
+state of an app, e.g. in an atom or with re-frame, see
 [How to keep the lock screen in step with your app's state](doc/app-state.md).
 
 A function whose name ends in `!` changes the page or returns a
@@ -112,8 +132,10 @@ also says whether the browser accepts a position state and chapters. To
 test your handlers in Node, see
 [How to test a player without the browser's session](doc/testing.md).
 
-Merge your own handlers over those of `element-actions`, which play,
-pause, stop and seek the element itself. Stop pauses the element where
+The `:actions` of `attach!` sets the handlers of `element-actions`, which
+play, pause, stop and seek the element itself. For buttons of your own as
+well, merge your handlers over those of `element-actions` and pass them
+to `actions!` instead. Stop pauses the element where
 it is, as Android's Media3 stops, so the listener can resume there. Keep
 seekto among the handlers: Safari drops its own buttons once a page sets
 a handler, so without seekto its lock screen has no scrubber. The skips
@@ -215,6 +237,17 @@ effect is a keyword and the arguments of the function that it names:
   (fn [_ [_ position]]
     {:fx [[:media [[:seek position] [:play]]]]}))
 ```
+
+For the buttons of the lock screen, `session/action-effects` gives the
+effects of a press, e.g. `[[:seek 784]]`, and the answers can come back
+as an event, e.g. to show a refused play. The
+[app state guide](doc/app-state.md#with-re-frame) does both.
+
+Call `play!`, or `apply!` with a play, in the handler of the click that
+asks for it. Each calls the browser before it returns, while the click
+still lets the page play. In re-frame, dispatch that click's event with
+`dispatch-sync`, so that its effects run within the click too.
+`picture-in-picture/enter!` and `fullscreen/enter!` need the same.
 
 A volume slider sounds even along its length on the `:cubic` curve, e.g.
 `(media/volume! audio 0.5 {:curve :cubic})`. An iPhone ignores the

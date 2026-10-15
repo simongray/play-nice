@@ -1,5 +1,6 @@
 {:cljdoc.doc/tree [["Readme" {:file "README.md"}]
                    ["Quickstart" {:file "doc/quickstart.md"}]
+                   ["Build a player with your own controls" {:file "doc/own-controls.md"}]
                    ["How to keep the lock screen in step with your app's state" {:file "doc/app-state.md"}]
                    ["How to put a Web Audio player on the lock screen" {:file "doc/web-audio.md"}]
                    ["How to test a player without the browser's session" {:file "doc/testing.md"}]

@@ -57,19 +57,19 @@ Put this in `src/player/core.cljs`:
   "Put the page's audio element on the lock screen."
   []
   (let [audio (js/document.querySelector "audio")]
-    (session/attach! audio)
+    (js/console.log (pr-str (session/support!)))
+    (session/attach! audio {:actions {:seekbackward 10 :seekforward 10}})
     (session/metadata! {:title   "My first track"
                         :artist  "Me"
                         :artwork [{:src   "cover.png"
                                    :sizes "512x512"
-                                   :type  "image/png"}]})
-    (session/actions! (session/element-actions audio {:seekbackward 10
-                                                      :seekforward  10}))
-    (js/console.log (pr-str (session/support!)))))
+                                   :type  "image/png"}]})))
 ```
 
-`attach!` keeps the media controls in step with the element, `metadata!`
-shows the title, artist and cover, and `actions!` sets the buttons.
+`attach!` keeps the media controls in step with the element, and with
+`:actions` it sets their buttons, which play, pause and skip it.
+`metadata!` shows the title, artist and cover. `support!` comes first,
+since it finds out what the browser supports by clearing each button.
 
 ## Run it
 
@@ -99,6 +99,7 @@ Now Playing in the Control Center shows the same track and buttons.
 
 ## What next
 
+- [Build a player with your own controls](own-controls.md)
 - [How to keep the lock screen in step with your app's state](app-state.md)
 - [Reference](reference.md)
 - [The browsers' differences](browsers.md)

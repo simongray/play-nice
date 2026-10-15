@@ -62,7 +62,7 @@
   [:or
    [:cat [:= :play] [:? [:map [:muted-fallback {:optional true} :boolean]]]]
    [:cat [:= :pause]]
-   [:cat [:= :seek] 'number?]
+   [:cat [:= :seek] 'number? [:? [:map [:fast {:optional true} :boolean]]]]
    [:cat [:= :rate] 'number? [:? [:map [:preserves-pitch {:optional true} :boolean]]]]
    [:cat [:= :volume] 'number? [:? [:map [:curve {:optional true} [:enum :linear :cubic]]]]]
    [:cat [:= :muted] :boolean]

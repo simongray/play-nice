@@ -82,9 +82,41 @@ mounts:
 
 ## With re-frame
 
-Make the lock screen an effect, and return it from the events that change
-what plays. The handlers dispatch events of their own, since the element
-isn't in the app's database:
+Keep the media element out of the app's database, in an atom, and make
+what you do to it effects. The `:media` effect applies effects of
+`media/apply!`, and dispatches their answers when you name an event for
+them, e.g. to show that the browser refused to play:
+
+```clojure
+(require '[dk.simongray.play-nice.media :as media])
+
+(defonce audio
+  (atom nil))
+
+(rf/reg-fx :media
+  (fn [{:keys [effects on-answers]}]
+    (cond-> (media/apply! @audio effects)
+      on-answers (.then #(rf/dispatch (conj on-answers %))))))
+
+(rf/reg-event-fx :player/play-clicked
+  (fn [_ _]
+    {:fx [[:media {:effects    [[:play {:muted-fallback true}]]
+                   :on-answers [:player/answered]}]]}))
+
+(rf/reg-event-db :player/answered
+  (fn [db [_ [answer]]]
+    (assoc db :answer answer)))
+```
+
+Dispatch the click's event with `dispatch-sync`, e.g. `[:button
+{:on-click #(rf/dispatch-sync [:player/play-clicked])} "Play"]`, so that
+the browser gets the play while the click still lets the page play.
+
+Make the lock screen an effect too, and return it from the events that
+change what plays. Its buttons dispatch events, and
+`session/action-effects` turns a press into effects. The `:press` effect
+reads the element's state when it runs, since a state in the database is
+as old as the last event that it followed:
 
 ```clojure
 (rf/reg-fx :lock-screen
@@ -92,13 +124,26 @@ isn't in the app's database:
     (session/metadata! metadata)
     (session/actions! handlers)))
 
+(def skips
+  "The seconds of the skip buttons."
+  {:seekbackward 15 :seekforward 30})
+
+(rf/reg-fx :press
+  (fn [details]
+    (media/apply! @audio (session/action-effects details
+                                                 (media/state @audio)
+                                                 skips))))
+
 (def handlers
   "The buttons of the lock screen, as events. Keep :seekto, since
   Safari's lock screen has no scrubber without it."
-  {:play      #(rf/dispatch [:player/resume])
-   :pause     #(rf/dispatch [:player/pause])
-   :seekto    #(rf/dispatch [:player/seek (:seek-time %)])
-   :nexttrack #(rf/dispatch [:player/next])})
+  (assoc (zipmap [:play :pause :stop :seekto :seekbackward :seekforward]
+                 (repeat #(rf/dispatch [:player/press %])))
+         :nexttrack #(rf/dispatch [:player/next])))
+
+(rf/reg-event-fx :player/press
+  (fn [_ [_ details]]
+    {:fx [[:press details]]}))
 
 (rf/reg-event-fx :player/play
   (fn [{:keys [db]} [_ index]]
@@ -109,15 +154,21 @@ isn't in the app's database:
 ```
 
 Attach the element in a ref callback, which React calls with nil when the
-element goes. Define it once, since React calls a new function at every
-render, and the element would be detached and attached each time:
+element goes, and follow its state into the database. Define the
+callback once, since React calls a new function at every render, and the
+element would be detached and attached each time:
 
 ```clojure
+(defonce detach!
+  (atom (constantly nil)))
+
 (defn attach-audio!
   "Attach the media `element` that React mounts, or detach it at nil."
   [element]
   (if element
-    (reset! detach! (session/attach! element))
+    (let [stop! (media/watch! element #(rf/dispatch [:player/state %]))]
+      (reset! audio element)
+      (reset! detach! (juxt stop! (session/attach! element))))
     (@detach!)))
 
 [:audio {:ref attach-audio!}]

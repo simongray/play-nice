@@ -146,6 +146,19 @@
               (is (= [[:playback-state "none"] [:position nil]] @calls)
                   "after detaching, the element's events change nothing")))))
 
+(deftest the-handlers-of-the-element
+  (let [calls    (atom [])
+        handlers (atom {})
+        opts     {:session (recorder calls {:handlers handlers})
+                  :actions {:seekbackward 15 :seekforward 30}}
+        ^js a    (js/document.createElement "audio")
+        detach!  (session/attach! a opts)]
+    (is (= #{"play" "pause" "stop" "seekto" "seekbackward" "seekforward"}
+           (set (keys (filter (comp fn? val) @handlers))))
+        "set at the attach")
+    (detach!)
+    (is (not-any? fn? (vals @handlers)) "and cleared at the detach")))
+
 (deftest one-element-at-a-time
   (let [calls  (atom [])
         opts   {:session (recorder calls {})}

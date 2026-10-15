@@ -148,6 +148,27 @@
                                                              skips)))))
         "only the track buttons whose skips have seconds")))
 
+(deftest the-effects-of-a-press
+  (let [state   {:current-time 100 :duration 3600}
+        offsets {:seekbackward 15 :seekforward 30}
+        effects #(session/action-effects %1 state (merge offsets %2))]
+    (is (= [[:play]] (effects {:action :play} {})))
+    (is (= [[:pause]] (effects {:action :stop} {})) "a stop that keeps the place")
+    (is (= [[:seek 130]] (effects {:action :seekforward} {})))
+    (is (= [[:seek 115]] (effects {:action :seekforward :seek-offset 15} {}))
+        "the seconds that the browser asks for")
+    (is (= [[:seek 130]] (effects {:action :seekforward :seek-offset 15}
+                                  {:ignore-seek-offset true})))
+    (is (= [[:seek 754 {:fast true}]]
+           (effects {:action :seekto :seek-time 754 :fast-seek true} {}))
+        "fast, as the scrubber asks")
+    (is (= [] (effects {:action :nexttrack} {})) "a track button that's the app's")
+    (is (= [[:seek 85]] (effects {:action :previoustrack} {:track-buttons :skips}))
+        "or a skip")
+    (is (= [] (effects {:action :seekto} {})) "a seek without a time")
+    (is (= [] (session/action-effects {:action :seekforward} state {}))
+        "or a skip without seconds")))
+
 (deftest stopping
   (let [paused (atom 0)
         ^js el #js {:currentTime 754 :pause #(swap! paused inc)}]
