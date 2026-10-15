@@ -193,7 +193,7 @@ them that `::cue` allows.
 By their autoplay policies, Chrome and WebKit on iOS pause a muted video
 with the autoplay attribute when it scrolls out of view, and play it
 again when it returns, but they leave alone a video that a page plays
-itself. So `autoplay!` follows the
+itself. So `play-in-view!` follows the
 same rule for any video, in every engine. It pauses only a muted video,
 as they do, so that a video with sound plays on below the fold. And it
 gives way to the visitor: a pause it didn't make itself is theirs, after

@@ -22,247 +22,6 @@ keywords named after their constants, e.g. `:have-metadata` for
 `HAVE_METADATA`.
 
 
-## The session
-
-The `session` namespace follows the
-[Media Session](https://www.w3.org/TR/mediasession/) Working Draft of 5
-June 2026.
-
-### Metadata
-
-Metadata is a map of the keys of
-[MediaMetadataInit](https://www.w3.org/TR/mediasession/#dictdef-mediametadatainit):
-
-| Key | Value |
-|---|---|
-| `:title` | A string, "" by default |
-| `:artist` | A string, "" by default |
-| `:album` | A string, "" by default |
-| `:artwork` | A vector of images |
-| `:chapter-info` | A vector of chapters, which only Chromium shows |
-
-An image is a map of the keys of
-[MediaImage](https://www.w3.org/TR/mediasession/#dictdef-mediaimage):
-
-| Key | Value |
-|---|---|
-| `:src` | The URL, resolved against the page's base URL. Required. |
-| `:sizes` | E.g. "512x512", "" by default |
-| `:type` | E.g. "image/png", "" by default |
-
-A chapter is a map of the keys of
-[ChapterInformationInit](https://www.w3.org/TR/mediasession/#dictdef-chapterinformationinit):
-
-| Key | Value |
-|---|---|
-| `:title` | A string, "" by default |
-| `:start-time` | Seconds from the start, 0 by default |
-| `:artwork` | A vector of images |
-
-`metadata!` leaves out a chapter whose start time is negative, infinite
-or NaN, and an image whose `:src` is missing or doesn't parse as a URL.
-
-### Actions
-
-The actions are the keywords of
-[MediaSessionAction](https://www.w3.org/TR/mediasession/#enumdef-mediasessionaction),
-which `session/actions` holds:
-
-| Kind | Actions |
-|---|---|
-| Playing | `:play` `:pause` `:stop` |
-| Seeking | `:seekbackward` `:seekforward` `:seekto` |
-| Tracks | `:previoustrack` `:nexttrack` `:skipad` |
-| Slides | `:previousslide` `:nextslide` |
-| Calls | `:togglemicrophone` `:togglecamera` `:togglescreenshare` `:hangup` `:voiceactivity` |
-| Windows | `:enterpictureinpicture` |
-
-The handlers are a map of action to a function of the details. A nil
-function clears its action.
-
-`previous-track` returns `:previous` within the first 3 seconds of an
-item that has one before it, and `:restart` otherwise, as
-[Media3](https://developer.android.com/reference/androidx/media3/common/Player#seekToPrevious())
-does.
-
-### Details
-
-A handler gets the details as a map of the keys of
-[MediaSessionActionDetails](https://www.w3.org/TR/mediasession/#dictdef-mediasessionactiondetails):
-
-| Key | For | Value |
-|---|---|---|
-| `:action` | Every action | The action |
-| `:seek-offset` | `:seekbackward`, `:seekforward` | Seconds, when the browser gives them |
-| `:seek-time` | `:seekto` | Seconds from the start |
-| `:fast-seek` | `:seekto` | True when a fast, less precise seek will do, e.g. while the user drags the scrubber |
-| `:is-activating` | `:togglemicrophone`, `:togglecamera`, `:togglescreenshare` | Whether the user turns it on |
-| `:enter-picture-in-picture-reason` | `:enterpictureinpicture` | `:useraction`, `:contentoccluded` or `:other` |
-
-### Position state
-
-The position state is a map of the keys of
-[MediaPositionState](https://www.w3.org/TR/mediasession/#dictdef-mediapositionstate):
-
-| Key | Value |
-|---|---|
-| `:duration` | Seconds, or `##Inf` for a live stream. Required. |
-| `:playback-rate` | 1 by default. A negative rate plays backwards, and 0 isn't allowed. |
-| `:position` | Seconds from the start, 0 by default, within 0 and the duration |
-
-`position-state` and `position!` count a rate of 0, or one that isn't
-finite, as 1, keep the position within the duration, and clear the state
-while the duration is unknown.
-
-### Playback state
-
-The playback state is `:none`, `:paused` or `:playing`, as
-[MediaSessionPlaybackState](https://www.w3.org/TR/mediasession/#enumdef-mediasessionplaybackstate)
-has them.
-
-### The element map
-
-The functions that follow a media element take its state, as
-`media/state` gives it, i.e. `element-position`, `element-state`,
-`seek-position` and the `:position-fn` of `attach!`. They read these
-keys of it:
-
-| Key | Attribute |
-|---|---|
-| `:duration` | [`duration`](https://html.spec.whatwg.org/multipage/media.html#dom-media-duration), nil until the metadata has loaded |
-| `:current-time` | [`currentTime`](https://html.spec.whatwg.org/multipage/media.html#dom-media-currenttime) |
-| `:playback-rate` | [`playbackRate`](https://html.spec.whatwg.org/multipage/media.html#dom-media-playbackrate) |
-| `:paused` | [`paused`](https://html.spec.whatwg.org/multipage/media.html#dom-media-paused) |
-| `:error` | [`error`](https://html.spec.whatwg.org/multipage/media.html#dom-media-error), as a map of its `:code` and `:message`, or nil |
-
-`attach!` reads the state at the events of `session/element-events`,
-and counts an element with an error as paused.
-
-### Options
-
-| Option | Of | Value |
-|---|---|---|
-| `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
-| `:position-fn` | `attach!` | A function from the element's state, as `media/state` gives it, to the position state, e.g. `element-position`. Without it, the position state stays clear. |
-| `:events` | `attach!` | The events of the element to follow, `session/element-events` by default |
-| `:actions` | `attach!` | The options of `element-actions`, e.g. `{:seekbackward 15 :seekforward 30}`, to set its handlers too, which detaching clears |
-| `:seekbackward`, `:seekforward` | `element-actions` | The seconds of each skip, e.g. 15 and 30. A skip without them is left out. |
-| `:ignore-seek-offset` | `element-actions` | True to skip by those seconds even where the details have a `:seek-offset` |
-| `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the skips have their seconds |
-
-The `:stop` of `element-actions` pauses the element where it is, as
-Media3's `Player.stop` keeps the position. Each of its handlers applies
-what `action-effects` returns for the press, the effects of
-`media/apply!` as data, e.g. `[[:seek 784]]` for a skip forward at 754,
-or `[]` for a press that doesn't touch the element.
-
-### Support
-
-`support!` returns nil where the browser has no Media Session, and else a
-map:
-
-| Key | Value |
-|---|---|
-| `:actions` | The set of actions that the browser accepts |
-| `:position-state?` | Whether it accepts a position state |
-| `:chapter-info?` | Whether its metadata can have chapters |
-
-
-## Times in links
-
-The `fragment` namespace follows
-[Media Fragments URI 1.0 (basic)](https://www.w3.org/TR/media-frags/),
-a W3C Recommendation of 25 September 2012.
-
-`time` returns the interval of a URL's temporal fragment, its last valid
-`t`, as a map of its `:start` and `:end` in seconds, e.g. `{:start 73
-:end 133}` for `#t=npt:73,133`. The start is 0 where the fragment leaves
-it out, and the end is left out where the fragment does. The times are
-Normal Play Time, which `npt` reads:
-
-| Form | Example | Seconds |
-|---|---|---|
-| Seconds | `73.5` | 73.5 |
-| Minutes and seconds | `01:13` | 73 |
-| Hours, minutes and seconds | `1:02:03.5` | 3723.5 |
-
-Minutes and seconds take two digits each. The SMPTE and clock formats of
-the advanced profile count as invalid.
-
-`link-time` returns the seconds of a page's `t` query parameter, in the
-forms `73`, `73s`, `1m13s`, `1h2m3s` and `01:13`.
-
-`session/clip-position` takes a map of a clip's `:start` and `:end`, e.g.
-from `time`, and the element map, and returns the position state within
-the clip. Without an `:end`, the clip ends with the file.
-
-
-## What the browser can play
-
-The `capabilities` namespace follows the
-[Media Capabilities](https://www.w3.org/TR/media-capabilities/) Working
-Draft of 9 June 2026.
-
-### Configurations
-
-A configuration is a map of the keys of
-[MediaDecodingConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-mediadecodingconfiguration),
-with `:audio`, `:video` or both:
-
-| Key | Value |
-|---|---|
-| `:type` | `:file`, `:media-source` or `:webrtc`. Required. |
-| `:audio` | An audio configuration |
-| `:video` | A video configuration |
-
-An audio configuration is a map of the keys of
-[AudioConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-audioconfiguration):
-
-| Key | Value |
-|---|---|
-| `:content-type` | The MIME type. Required. |
-| `:channels` | A string, e.g. "2" |
-| `:bitrate` | Bits per second |
-| `:samplerate` | Samples per second |
-| `:spatial-rendering` | Whether the audio is spatial |
-
-A video configuration is a map of the keys of
-[VideoConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-videoconfiguration).
-Every engine rejects one without its content type, width, height,
-bitrate and frame rate:
-
-| Key | Value |
-|---|---|
-| `:content-type` | The MIME type |
-| `:width`, `:height` | Pixels |
-| `:bitrate` | Bits per second |
-| `:framerate` | Frames per second |
-| `:has-alpha-channel` | Whether it's transparent |
-| `:hdr-metadata-type` | `:smpteSt2086`, `:smpteSt2094-10` or `:smpteSt2094-40` |
-| `:color-gamut` | `:srgb`, `:p3` or `:rec2020` |
-| `:transfer-function` | `:srgb`, `:pq` or `:hlg` |
-| `:spatial-scalability` | Whether it uses spatial scalability |
-
-A content type is
-[valid](https://www.w3.org/TR/media-capabilities/#check-mime-type-validity)
-when a type that implies its codec, e.g. `audio/mpeg`, has no parameters,
-and a container type, e.g. `audio/mp4`, has one codecs parameter that
-names a single codec, e.g. `audio/mp4; codecs="mp4a.40.2"`. An audio
-configuration has an `audio/` type.
-
-### Answers
-
-What `decoding-info!` returns:
-
-| Key | Value |
-|---|---|
-| `:supported`, `:smooth`, `:power-efficient` | Booleans from [MediaCapabilitiesInfo](https://www.w3.org/TR/media-capabilities/#dictdef-mediacapabilitiesinfo), when Media Capabilities answered |
-| `:can-play-type` | The answer of [`canPlayType`](https://html.spec.whatwg.org/multipage/media.html#dom-navigator-canplaytype) for the content types, `:probably`, `:maybe` or nil, unless Media Capabilities supports the configuration |
-
-For a configuration of both audio and video, `:can-play-type` is the
-weaker of the two answers.
-
-
 ## The media element
 
 The `media` namespace follows the
@@ -389,7 +148,7 @@ that a locked volume doesn't fire.
 
 ## Text tracks
 
-The `tracks` namespace follows the
+The `media.tracks` namespace follows the
 [text tracks](https://html.spec.whatwg.org/multipage/media.html#timed-text-tracks)
 of the HTML Living Standard, and the
 [VTTCue](https://www.w3.org/TR/webvtt1/#the-vttcue-interface) of the
@@ -437,7 +196,7 @@ matches, and all of those kinds turn off.
 
 ## Caption styles
 
-The `captions` namespace follows the settings of
+The `media.captions` namespace follows the settings of
 [47 CFR 79.103(c)](https://www.ecfr.gov/current/title-47/chapter-I/subchapter-C/part-79/subpart-B/section-79.103),
 the FCC's rule for caption displays, and the `::cue` pseudo-element of
 [WebVTT](https://www.w3.org/TR/webvtt1/#the-cue-pseudo-element).
@@ -464,6 +223,251 @@ in `::cue`.
 `css` returns the rule, e.g. `video::cue{font-size:150%}`, and
 `style!` adds it to the page for one video, and returns a function that
 removes it.
+
+
+## What the browser can play
+
+The `media.capabilities` namespace follows the
+[Media Capabilities](https://www.w3.org/TR/media-capabilities/) Working
+Draft of 9 June 2026.
+
+### Configurations
+
+A configuration is a map of the keys of
+[MediaDecodingConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-mediadecodingconfiguration),
+with `:audio`, `:video` or both:
+
+| Key | Value |
+|---|---|
+| `:type` | `:file`, `:media-source` or `:webrtc`. Required. |
+| `:audio` | An audio configuration |
+| `:video` | A video configuration |
+
+An audio configuration is a map of the keys of
+[AudioConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-audioconfiguration):
+
+| Key | Value |
+|---|---|
+| `:content-type` | The MIME type. Required. |
+| `:channels` | A string, e.g. "2" |
+| `:bitrate` | Bits per second |
+| `:samplerate` | Samples per second |
+| `:spatial-rendering` | Whether the audio is spatial |
+
+A video configuration is a map of the keys of
+[VideoConfiguration](https://www.w3.org/TR/media-capabilities/#dictdef-videoconfiguration).
+Every engine rejects one without its content type, width, height,
+bitrate and frame rate:
+
+| Key | Value |
+|---|---|
+| `:content-type` | The MIME type |
+| `:width`, `:height` | Pixels |
+| `:bitrate` | Bits per second |
+| `:framerate` | Frames per second |
+| `:has-alpha-channel` | Whether it's transparent |
+| `:hdr-metadata-type` | `:smpteSt2086`, `:smpteSt2094-10` or `:smpteSt2094-40` |
+| `:color-gamut` | `:srgb`, `:p3` or `:rec2020` |
+| `:transfer-function` | `:srgb`, `:pq` or `:hlg` |
+| `:spatial-scalability` | Whether it uses spatial scalability |
+
+A content type is
+[valid](https://www.w3.org/TR/media-capabilities/#check-mime-type-validity)
+when a type that implies its codec, e.g. `audio/mpeg`, has no parameters,
+and a container type, e.g. `audio/mp4`, has one codecs parameter that
+names a single codec, e.g. `audio/mp4; codecs="mp4a.40.2"`. An audio
+configuration has an `audio/` type.
+
+### Answers
+
+What `decoding-info!` returns:
+
+| Key | Value |
+|---|---|
+| `:supported`, `:smooth`, `:power-efficient` | Booleans from [MediaCapabilitiesInfo](https://www.w3.org/TR/media-capabilities/#dictdef-mediacapabilitiesinfo), when Media Capabilities answered |
+| `:can-play-type` | The answer of [`canPlayType`](https://html.spec.whatwg.org/multipage/media.html#dom-navigator-canplaytype) for the content types, `:probably`, `:maybe` or nil, unless Media Capabilities supports the configuration |
+
+For a configuration of both audio and video, `:can-play-type` is the
+weaker of the two answers.
+
+
+## Times in links
+
+The `media.fragment` namespace follows
+[Media Fragments URI 1.0 (basic)](https://www.w3.org/TR/media-frags/),
+a W3C Recommendation of 25 September 2012.
+
+`time` returns the interval of a URL's temporal fragment, its last valid
+`t`, as a map of its `:start` and `:end` in seconds, e.g. `{:start 73
+:end 133}` for `#t=npt:73,133`. The start is 0 where the fragment leaves
+it out, and the end is left out where the fragment does. The times are
+Normal Play Time, which `npt` reads:
+
+| Form | Example | Seconds |
+|---|---|---|
+| Seconds | `73.5` | 73.5 |
+| Minutes and seconds | `01:13` | 73 |
+| Hours, minutes and seconds | `1:02:03.5` | 3723.5 |
+
+Minutes and seconds take two digits each. The SMPTE and clock formats of
+the advanced profile count as invalid.
+
+`link-time` returns the seconds of a page's `t` query parameter, in the
+forms `73`, `73s`, `1m13s`, `1h2m3s` and `01:13`.
+
+`session/clip-position` takes a map of a clip's `:start` and `:end`, e.g.
+from `time`, and the element map, and returns the position state within
+the clip. Without an `:end`, the clip ends with the file.
+
+
+## The session
+
+The `session` namespace follows the
+[Media Session](https://www.w3.org/TR/mediasession/) Working Draft of 5
+June 2026.
+
+### Metadata
+
+Metadata is a map of the keys of
+[MediaMetadataInit](https://www.w3.org/TR/mediasession/#dictdef-mediametadatainit):
+
+| Key | Value |
+|---|---|
+| `:title` | A string, "" by default |
+| `:artist` | A string, "" by default |
+| `:album` | A string, "" by default |
+| `:artwork` | A vector of images |
+| `:chapter-info` | A vector of chapters, which only Chromium shows |
+
+An image is a map of the keys of
+[MediaImage](https://www.w3.org/TR/mediasession/#dictdef-mediaimage):
+
+| Key | Value |
+|---|---|
+| `:src` | The URL, resolved against the page's base URL. Required. |
+| `:sizes` | E.g. "512x512", "" by default |
+| `:type` | E.g. "image/png", "" by default |
+
+Each engine picks an image its own way. Chrome on Android skips those
+below 114 pixels and Safari those below 128, and both prefer 512. So
+offer a square PNG of 512 by 512, with its `:sizes` and `:type`.
+
+A chapter is a map of the keys of
+[ChapterInformationInit](https://www.w3.org/TR/mediasession/#dictdef-chapterinformationinit):
+
+| Key | Value |
+|---|---|
+| `:title` | A string, "" by default |
+| `:start-time` | Seconds from the start, 0 by default |
+| `:artwork` | A vector of images |
+
+`metadata!` leaves out a chapter whose start time is negative, infinite
+or NaN, and an image whose `:src` is missing or doesn't parse as a URL.
+
+### Actions
+
+The actions are the keywords of
+[MediaSessionAction](https://www.w3.org/TR/mediasession/#enumdef-mediasessionaction),
+which `session/actions` holds:
+
+| Kind | Actions |
+|---|---|
+| Playing | `:play` `:pause` `:stop` |
+| Seeking | `:seekbackward` `:seekforward` `:seekto` |
+| Tracks | `:previoustrack` `:nexttrack` `:skipad` |
+| Slides | `:previousslide` `:nextslide` |
+| Calls | `:togglemicrophone` `:togglecamera` `:togglescreenshare` `:hangup` `:voiceactivity` |
+| Windows | `:enterpictureinpicture` |
+
+The handlers are a map of action to a function of the details. A nil
+function clears its action.
+
+`previous-track` returns `:previous` within the first 3 seconds of an
+item that has one before it, and `:restart` otherwise, as
+[Media3](https://developer.android.com/reference/androidx/media3/common/Player#seekToPrevious())
+does.
+
+### Details
+
+A handler gets the details as a map of the keys of
+[MediaSessionActionDetails](https://www.w3.org/TR/mediasession/#dictdef-mediasessionactiondetails):
+
+| Key | For | Value |
+|---|---|---|
+| `:action` | Every action | The action |
+| `:seek-offset` | `:seekbackward`, `:seekforward` | Seconds, when the browser gives them |
+| `:seek-time` | `:seekto` | Seconds from the start |
+| `:fast-seek` | `:seekto` | True when a fast, less precise seek will do, e.g. while the user drags the scrubber |
+| `:is-activating` | `:togglemicrophone`, `:togglecamera`, `:togglescreenshare` | Whether the user turns it on |
+| `:enter-picture-in-picture-reason` | `:enterpictureinpicture` | `:useraction`, `:contentoccluded` or `:other` |
+
+### Position state
+
+The position state is a map of the keys of
+[MediaPositionState](https://www.w3.org/TR/mediasession/#dictdef-mediapositionstate):
+
+| Key | Value |
+|---|---|
+| `:duration` | Seconds, or `##Inf` for a live stream. Required. |
+| `:playback-rate` | 1 by default. A negative rate plays backwards, and 0 isn't allowed. |
+| `:position` | Seconds from the start, 0 by default, within 0 and the duration |
+
+`position-state` and `position!` count a rate of 0, or one that isn't
+finite, as 1, keep the position within the duration, and clear the state
+while the duration is unknown.
+
+### Playback state
+
+The playback state is `:none`, `:paused` or `:playing`, as
+[MediaSessionPlaybackState](https://www.w3.org/TR/mediasession/#enumdef-mediasessionplaybackstate)
+has them.
+
+### The element map
+
+The functions that follow a media element take its state, as
+`media/state` gives it, i.e. `element-position`, `element-state`,
+`seek-position` and the `:position-fn` of `attach!`. They read these
+keys of it:
+
+| Key | Attribute |
+|---|---|
+| `:duration` | [`duration`](https://html.spec.whatwg.org/multipage/media.html#dom-media-duration), nil until the metadata has loaded |
+| `:current-time` | [`currentTime`](https://html.spec.whatwg.org/multipage/media.html#dom-media-currenttime) |
+| `:playback-rate` | [`playbackRate`](https://html.spec.whatwg.org/multipage/media.html#dom-media-playbackrate) |
+| `:paused` | [`paused`](https://html.spec.whatwg.org/multipage/media.html#dom-media-paused) |
+| `:error` | [`error`](https://html.spec.whatwg.org/multipage/media.html#dom-media-error), as a map of its `:code` and `:message`, or nil |
+
+`attach!` reads the state at the events of `session/element-events`,
+and counts an element with an error as paused.
+
+### Options
+
+| Option | Of | Value |
+|---|---|---|
+| `:session` | Every function that touches the browser | The MediaSession to set, e.g. a stand-in in a test, or nil for none. The page's by default. |
+| `:position-fn` | `attach!` | A function from the element's state, as `media/state` gives it, to the position state, e.g. `element-position`. Without it, the position state stays clear. |
+| `:events` | `attach!` | The events of the element to follow, `session/element-events` by default |
+| `:actions` | `attach!` | The options of `element-actions`, e.g. `{:seekbackward 15 :seekforward 30}`, to set its handlers too, which detaching clears |
+| `:seekbackward`, `:seekforward` | `element-actions` | The seconds of each skip, e.g. 15 and 30. A skip without them is left out. |
+| `:ignore-seek-offset` | `element-actions` | True to skip by those seconds even where the details have a `:seek-offset` |
+| `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the skips have their seconds |
+
+The `:stop` of `element-actions` pauses the element where it is, as
+Media3's `Player.stop` keeps the position. Each of its handlers applies
+what `action-effects` returns for the press, the effects of
+`media/apply!` as data, e.g. `[[:seek 784]]` for a skip forward at 754,
+or `[]` for a press that doesn't touch the element.
+
+### Support
+
+`support!` returns nil where the browser has no Media Session, and else a
+map:
+
+| Key | Value |
+|---|---|
+| `:actions` | The set of actions that the browser accepts |
+| `:position-state?` | Whether it accepts a position state |
+| `:chapter-info?` | Whether its metadata can have chapters |
 
 
 ## Keyboard and seek bar
@@ -525,7 +529,7 @@ JVM.
 
 ## Picture-in-Picture
 
-The `picture-in-picture` namespace follows the
+The `display.picture-in-picture` namespace follows the
 [Picture-in-Picture](https://www.w3.org/TR/picture-in-picture/) Working
 Draft of 16 June 2026.
 
@@ -555,63 +559,9 @@ and `state` returns without the size:
 | `:width`, `:height` | The size of the window in pixels, while it's in it |
 
 
-## Autoplay in view
-
-The `viewport` namespace follows the
-[Intersection Observer](https://www.w3.org/TR/intersection-observer/)
-Working Draft.
-
-What `autoplay!` passes on:
-
-| Key | Value |
-|---|---|
-| `:visible` | Whether at least the threshold of the video shows |
-| `:playing` | Whether the video plays |
-| `:held` | `:visitor` once the visitor has paused it, or `:reduced-motion` where the user prefers reduced motion, and left out otherwise |
-| `:refused` | The refusal of the last play, e.g. `:not-allowed`, and left out otherwise |
-
-| Option | Value |
-|---|---|
-| `:threshold` | The share of the video that must show for it to play, 0.5 by default |
-| `:reduced-motion` | Whether to hold the video, by default as `reduced-motion?` says the user prefers |
-
-The video plays as `media/play!` with `:muted-fallback` plays it, and
-pauses out of view only while it's muted. A video that ends doesn't
-count as paused by the visitor.
-
-
-## One player across tabs
-
-The `tabs` namespace follows the
-[Web Locks API](https://www.w3.org/TR/web-locks/). `attach!` requests
-the lock of the name you give, with `steal`, when the element plays, and
-pauses the element when the lock is taken from it. It lets go of the
-lock when the element pauses and at `pagehide`, and takes it again when
-the page comes back from the back/forward cache still playing.
-
-| Option | Value |
-|---|---|
-| `:window` | The window whose navigator holds the locks, the page's by default |
-
-
-## The screen kept on
-
-The `wake-lock` namespace follows the
-[Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/).
-`hold-while-playing!` requests a lock of the screen while the element
-plays and its page is visible, lets go of it at a pause, and requests it
-again at each `visibilitychange` that shows the page, since the browser
-lets go of every lock while the page is hidden. A lock that the browser
-refuses, e.g. on a low battery, is let go of without a word.
-
-| Option | Value |
-|---|---|
-| `:window` | The window whose navigator holds the lock, the page's by default |
-
-
 ## Fullscreen
 
-The `fullscreen` namespace follows the
+The `display.fullscreen` namespace follows the
 [Fullscreen](https://fullscreen.spec.whatwg.org/) Living Standard,
 WebKit's own fullscreen of a video, and the
 [Screen Orientation](https://www.w3.org/TR/screen-orientation/) Working
@@ -653,7 +603,7 @@ refusal, e.g. `{:refused :not-supported}` on a desktop.
 
 ## Remote Playback
 
-The `remote-playback` namespace follows the
+The `display.remote-playback` namespace follows the
 [Remote Playback API](https://www.w3.org/TR/remote-playback/) Candidate
 Recommendation Draft of 30 April 2024, and WebKit's AirPlay events.
 
@@ -684,9 +634,24 @@ What the promise of `prompt!` resolves to:
 whose value "allow" lets a video on an iPhone use AirPlay all the same.
 
 
+## The screen kept on
+
+The `display.wake-lock` namespace follows the
+[Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/).
+`hold-while-playing!` requests a lock of the screen while the element
+plays and its page is visible, lets go of it at a pause, and requests it
+again at each `visibilitychange` that shows the page, since the browser
+lets go of every lock while the page is hidden. A lock that the browser
+refuses, e.g. on a low battery, is let go of without a word.
+
+| Option | Value |
+|---|---|
+| `:window` | The window whose navigator holds the lock, the page's by default |
+
+
 ## Autoplay
 
-The `autoplay` namespace follows the
+The `page.autoplay` namespace follows the
 [Autoplay Policy Detection](https://www.w3.org/TR/autoplay-detection/)
 Working Draft of 4 September 2025, and
 [user activation](https://html.spec.whatwg.org/multipage/interaction.html#tracking-user-activation)
@@ -704,6 +669,63 @@ transient activation, and otherwise at the first of
 | Option | Value |
 |---|---|
 | `:window` | The window to ask and to listen at, e.g. a stand-in in a test. The page's by default. |
+
+
+## Autoplay in view
+
+The `play-in-view!` of `page.autoplay` follows the
+[Intersection Observer](https://www.w3.org/TR/intersection-observer/)
+Working Draft.
+
+What `play-in-view!` passes on:
+
+| Key | Value |
+|---|---|
+| `:visible` | Whether at least the threshold of the video shows |
+| `:playing` | Whether the video plays |
+| `:held` | `:visitor` once the visitor has paused it, or `:reduced-motion` where the user prefers reduced motion, and left out otherwise |
+| `:refused` | The refusal of the last play, e.g. `:not-allowed`, and left out otherwise |
+
+| Option | Value |
+|---|---|
+| `:threshold` | The share of the video that must show for it to play, 0.5 by default |
+| `:reduced-motion` | Whether to hold the video, by default as `reduced-motion?` says the user prefers |
+
+The video plays as `media/play!` with `:muted-fallback` plays it, and
+pauses out of view only while it's muted. A video that ends doesn't
+count as paused by the visitor.
+
+
+## One player across tabs
+
+The `page.tabs` namespace follows the
+[Web Locks API](https://www.w3.org/TR/web-locks/). `attach!` requests
+the lock of the name you give, with `steal`, when the element plays, and
+pauses the element when the lock is taken from it. It lets go of the
+lock when the element pauses and at `pagehide`, and takes it again when
+the page comes back from the back/forward cache still playing.
+
+| Option | Value |
+|---|---|
+| `:window` | The window whose navigator holds the locks, the page's by default |
+
+
+## Embedding
+
+The `page.embed` namespace follows the
+[Permissions Policy](https://www.w3.org/TR/permissions-policy-1/)
+Working Draft of 22 September 2026.
+
+`allow` builds an iframe's allow attribute from a map of each feature to
+who may use it in the frame:
+
+| Value | In the attribute | Who |
+|---|---|---|
+| `true` | `fullscreen` | The frame's own origin, i.e. that of its `src` |
+| `"*"` | `fullscreen *` | Any origin the frame goes to |
+| `:none` | `fullscreen 'none'` | No one |
+| `["https://player.example"]` | `fullscreen https://player.example` | Those origins |
+| `false` or `nil` | | Left out, so the feature's default applies |
 
 
 ## Schemas
@@ -725,24 +747,6 @@ The `schema` namespace has a Malli schema for each of these maps:
 
 The schemas name predicates as symbols, e.g. `'number?`, which Malli's
 default registry reads in Clojure and ClojureScript alike.
-
-
-## Embedding
-
-The `embed` namespace follows the
-[Permissions Policy](https://www.w3.org/TR/permissions-policy-1/)
-Working Draft of 22 September 2026.
-
-`allow` builds an iframe's allow attribute from a map of each feature to
-who may use it in the frame:
-
-| Value | In the attribute | Who |
-|---|---|---|
-| `true` | `fullscreen` | The frame's own origin, i.e. that of its `src` |
-| `"*"` | `fullscreen *` | Any origin the frame goes to |
-| `:none` | `fullscreen 'none'` | No one |
-| `["https://player.example"]` | `fullscreen https://player.example` | Those origins |
-| `false` or `nil` | | Left out, so the feature's default applies |
 
 
 ## What each engine refuses

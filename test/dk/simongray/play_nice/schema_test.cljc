@@ -3,7 +3,7 @@
   ClojureScript against the library's own keywords."
   (:require [clojure.test :refer [deftest is]]
             [malli.core :as m]
-            [dk.simongray.play-nice.fragment :as fragment]
+            [dk.simongray.play-nice.media.fragment :as fragment]
             [dk.simongray.play-nice.schema :as schema]
             #?@(:cljs [[dk.simongray.play-nice.media :as media]
                        [dk.simongray.play-nice.session :as session]])))

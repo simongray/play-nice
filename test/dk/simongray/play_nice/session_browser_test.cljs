@@ -3,7 +3,7 @@
   that records each call, with a media element that plays."
   (:require [clojure.set :as set]
             [clojure.test :refer [deftest is]]
-            [dk.simongray.play-nice.keys :as keys]
+            [dk.simongray.play-nice.util.keys :as keys]
             [dk.simongray.play-nice.session :as session]
             [dk.simongray.play-nice.test-support
              :refer [garbage muted-video next-event run silence]]))

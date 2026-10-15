@@ -9,7 +9,7 @@
 
   The maps are open, as Malli's are by default, so a key that a browser
   adds passes."
-  (:require [dk.simongray.play-nice.captions :as captions]))
+  (:require [dk.simongray.play-nice.media.captions :as captions]))
 
 (def ranges
   "Time ranges, as from media/ranges: pairs of a start and an end in

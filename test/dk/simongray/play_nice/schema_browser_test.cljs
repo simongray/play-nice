@@ -2,10 +2,10 @@
   "The schemas against the states and answers of a real element."
   (:require [clojure.test :refer [deftest is]]
             [malli.core :as m]
-            [dk.simongray.play-nice.fullscreen :as fullscreen]
+            [dk.simongray.play-nice.display.fullscreen :as fullscreen]
             [dk.simongray.play-nice.media :as media]
-            [dk.simongray.play-nice.picture-in-picture :as picture-in-picture]
-            [dk.simongray.play-nice.remote-playback :as remote-playback]
+            [dk.simongray.play-nice.display.picture-in-picture :as picture-in-picture]
+            [dk.simongray.play-nice.display.remote-playback :as remote-playback]
             [dk.simongray.play-nice.schema :as schema]
             [dk.simongray.play-nice.test-support
              :refer [garbage muted-video next-event run silence]]))

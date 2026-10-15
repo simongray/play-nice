@@ -20,7 +20,7 @@
 
       (actions! (element-actions audio {:seekbackward 10
                                         :seekforward  10}))"
-  (:require [dk.simongray.play-nice.keys :as keys]
+  (:require [dk.simongray.play-nice.util.keys :as keys]
             [dk.simongray.play-nice.media :as media]))
 
 ;; W3C Media Session, Working Draft of 5 June 2026, §5, MediaSessionAction

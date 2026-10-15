@@ -2,7 +2,7 @@
   "The media element's pure functions, and the others on a stand-in for an
   element."
   (:require [clojure.test :refer [deftest is]]
-            [dk.simongray.play-nice.keys :as keys]
+            [dk.simongray.play-nice.util.keys :as keys]
             [dk.simongray.play-nice.media :as media]
             [dk.simongray.play-nice.test-support :refer [run]]))
 
