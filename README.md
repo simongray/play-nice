@@ -284,6 +284,22 @@ when another tab of the app takes the lock:
   (tabs/attach! audio "my-podcast-app"))
 ```
 
+The screen kept on
+------------------
+
+A playing video keeps the screen on, but no browser does that for audio,
+so a transcript or lyrics view goes dark while an episode plays.
+`wake-lock/hold-while-playing!` keeps the screen on while the element
+plays, and asks again each time the page shows again, since the browser
+lets go whenever it's hidden:
+
+```clojure
+(require '[dk.simongray.play-nice.wake-lock :as wake-lock])
+
+(def stop!
+  (wake-lock/hold-while-playing! audio))
+```
+
 Fullscreen
 ----------
 

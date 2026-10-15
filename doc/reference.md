@@ -541,6 +541,21 @@ the page comes back from the back/forward cache still playing.
 | `:window` | The window whose navigator holds the locks, the page's by default |
 
 
+## The screen kept on
+
+The `wake-lock` namespace follows the
+[Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/).
+`hold-while-playing!` requests a lock of the screen while the element
+plays and its page is visible, lets go of it at a pause, and requests it
+again at each `visibilitychange` that shows the page, since the browser
+lets go of every lock while the page is hidden. A lock that the browser
+refuses, e.g. on a low battery, is let go of without a word.
+
+| Option | Value |
+|---|---|
+| `:window` | The window whose navigator holds the lock, the page's by default |
+
+
 ## Fullscreen
 
 The `fullscreen` namespace follows the
