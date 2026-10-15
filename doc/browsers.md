@@ -114,7 +114,10 @@ instead.
 Only Firefox can tell a page in advance whether it may play, so
 `autoplay/policy` returns nil elsewhere. The answer of `play!` is what
 works everywhere, and `on-activation!` waits for the click, tap or key
-press after which the browser lets the page play.
+press after which the browser lets the page play. `play-when-allowed!`
+tries only once more after it, since a page that has activation but
+still may not play, e.g. by Safari's Never Auto-Play setting, would
+otherwise ask again without end.
 
 
 ## The source first, then the rest

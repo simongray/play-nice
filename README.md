@@ -261,9 +261,10 @@ Around the player
 -----------------
 
 Before the user's first click, a browser usually plays a page's media
-only muted, if at all. To start what it refused to play,
-`autoplay/on-activation!` calls a function at the user's next click,
-tap or key press. For a muted video at the top of a page,
+only muted, if at all. `autoplay/play-when-allowed!` plays an element
+muted where the browser refuses only its sound, and otherwise once more
+at the user's next click, tap or key press, and
+`autoplay/on-activation!` calls any function then. For a muted video at the top of a page,
 `autoplay/play-in-view!` plays it while it's in view and pauses it when
 it scrolls away, in every browser, and holds it where the user
 [prefers reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).

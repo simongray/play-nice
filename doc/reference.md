@@ -697,9 +697,16 @@ or `:audiocontext`. It returns nil where the browser has no
 transient activation, and otherwise at the first of
 `autoplay/activation-events` that activates the page.
 
+`play-when-allowed!` plays a media element with `media/play!`, and
+where the browser refuses, once more at the next activation. It calls
+its function with each answer, and where it waits, with
+`{:refused :not-allowed :waiting true}` first. It tries only twice, so a
+browser that never lets the page play can't make it loop.
+
 | Option | Value |
 |---|---|
 | `:window` | The window to ask and to listen at, e.g. a stand-in in a test. The page's by default. |
+| `:muted-fallback` | Of `play-when-allowed!`: false to wait for the user rather than play muted. True by default. |
 
 
 ## Autoplay in view

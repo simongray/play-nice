@@ -7,20 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### Waiting for a click after a refusal can loop
-
-The inspector plays with `:muted-fallback`, and where the browser
-refuses even that, it plays again with `on-activation!`. But
-`on-activation!` calls its function at once while the page has
-activation, so where `play!` is refused although the page is active,
-e.g. by Safari's Never Auto-Play setting, play and wait call each other
-without end. The inspector tries once more and then stops.
-
-- **Library:** every app wants this pattern, so `play!` could take it as
-  an option, e.g. `:retry-on-activation`, which tries once more at the
-  next activation and never loops. What the promise answers then needs a
-  decision: the first answer, with a way to get the second.
-
 ### Replicant's life-cycle hooks run inside the render
 
 Loading the source and starting `watch!` in `:replicant/on-mount` calls
@@ -122,6 +108,14 @@ plays everywhere.
   that the element played to its end. The `ended` event does. The
   docstring of `watch!`, the reference and the tutorial on your own
   controls now say so.
+- Waiting for a click after a refusal could loop, since `on-activation!`
+  calls its function at once while the page has activation, and a page
+  may have it and still not play, e.g. by Safari's Never Auto-Play
+  setting. `autoplay/play-when-allowed!` now plays muted where it may,
+  and else once more at the next activation, and calls its function with
+  each answer. It's a function of its own rather than an option of
+  `play!`, since the answer comes twice and `media` can't require
+  `page.autoplay`, which requires it.
 
 ## What worked as designed
 

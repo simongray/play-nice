@@ -10,7 +10,8 @@
 
   Only Firefox has Autoplay Policy Detection, so elsewhere you find out by
   calling media/play!, which answers {:refused :not-allowed} where the
-  browser won't play.
+  browser won't play. play-when-allowed! plays then at the user's next
+  click, tap or key press.
 
   Chrome and WebKit on iOS pause a muted video with the autoplay attribute
   when it scrolls out of view, and play it again when it returns, but
@@ -85,6 +86,45 @@
 
        :else
        (constantly nil)))))
+
+(defn play-when-allowed!
+  "Play the media `element` now, or where the browser refuses, once more at
+  the user's next click, tap or key press, with the `opts` above and below.
+  Call `f` with each answer of media/play!, and return a function that
+  stops it, e.g.
+
+      (def stop!
+        (play-when-allowed! audio #(swap! app assoc :answer %)))
+
+  The element plays muted where the browser refuses only its sound, which
+  answers {:playing true :muted true}. Where it refuses even that, `f`
+  gets {:refused :not-allowed :waiting true} while the call waits, and
+  then the answer of the second try. There's no third, so where the
+  browser never lets the page play, e.g. by Safari's Never Auto-Play
+  setting, the wait ends with its refusal rather than loop.
+
+  - :muted-fallback, false to wait for the user rather than play muted,
+    true by default"
+  ([element f]
+   (play-when-allowed! element f {}))
+  ([element f {:keys [muted-fallback] :or {muted-fallback true} :as opts}]
+   (let [stopped (atom false)
+         waiting (atom nil)
+         answer! #(when-not @stopped (f %))
+         play!   #(media/play! element {:muted-fallback muted-fallback})]
+     (.then (play!)
+            (fn [answer]
+              (if (= :not-allowed (:refused answer))
+                (when-not @stopped
+                  (f (assoc answer :waiting true))
+                  (reset! waiting (on-activation! #(.then (play!) answer!)
+                                                  opts)))
+                (answer! answer))))
+     (fn []
+       (reset! stopped true)
+       (when-let [stop! @waiting]
+         (stop!))
+       nil))))
 
 (defn reduced-motion?
   "Whether the user prefers reduced motion, as the media query
