@@ -108,7 +108,9 @@ Replace `src/player/core.cljs` with this:
 element moves to once it has the track's metadata. `watch!` calls
 `remember!` with the state of the element now and at each change, and
 `:timeupdate` adds the changes of its position while it plays, so that
-the seek bar moves.
+the seek bar moves. To start something once the track has played to its
+end, listen for the element's `ended` event rather than watch `:ended`,
+which a seek to the end makes true too.
 
 The handlers of `element-actions` are those of the lock screen, which
 `attach!` sets with `:actions`. The keyboard presses them too: `listen!`

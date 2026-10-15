@@ -132,7 +132,12 @@
   last, e.g.
 
       (def stop!
-        (watch! audio #(swap! app assoc :player %)))"
+        (watch! audio #(swap! app assoc :player %)))
+
+  To know that the element has played to its end, e.g. to play the next
+  episode, listen for its ended event. The state's :ended is also true
+  after a seek to the end while it's paused, and Chrome has set :paused
+  already by the first state in which :ended is true."
   ([element f]
    (watch! element f {}))
   ([^js element f {followed :events :or {followed events} :as opts}]

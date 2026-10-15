@@ -85,12 +85,15 @@ The status is the first of these that applies:
 | Status | When |
 |---|---|
 | `:error` | The element has an error |
-| `:ended` | It has played to the end |
+| `:ended` | It's at the end |
 | `:buffering` | It isn't paused, it's loading, and it has no data past the current position, as for the [`:buffering`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-buffering) pseudo-class |
 | `:idle` | It has no metadata |
 | `:ready` | Otherwise |
 
 The status doesn't say whether the element plays, since `:paused` does.
+Nor does `:ended` say that it played to the end, since a seek to the end
+while it's paused ends it too. To start the next track, listen for the
+element's `ended` event, which fires only when it played there.
 
 ### Answers
 

@@ -7,21 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### The end of an episode isn't in the stream of states
-
-The inspector first told the library that an episode had ended when
-`watch!` reported `:ended` true while `:paused` was still false, which is
-when the spec fires `ended`. In Chrome, that state never comes: Chrome
-sets `paused` before it fires `timeupdate` at the end, so the first state
-with `:ended` true has `:paused` true too. `:ended` is also true after a
-seek to the end while paused, so neither key tells that the element
-played to its end. The `ended` event does, and the inspector listens for
-it.
-
-- **Docs:** say this in the docstrings of `state` and `watch!`, and in
-  the tutorial on your own controls: listen for `ended` to know that it
-  played to the end.
-
 ### Waiting for a click after a refusal can loop
 
 The inspector plays with `:muted-fallback`, and where the browser
@@ -131,6 +116,12 @@ plays everywhere.
 - `tracks/watch!` threw in jsdom, whose text tracks fire no events, and
   the inspector's jsdom test crashed. It now does nothing there, as the
   other functions do where an API is missing.
+- The end of an episode isn't in the stream of states. In Chrome, the
+  first state with `:ended` true has `:paused` true too, and a seek to
+  the end while paused makes `:ended` true as well, so neither key says
+  that the element played to its end. The `ended` event does. The
+  docstring of `watch!`, the reference and the tutorial on your own
+  controls now say so.
 
 ## What worked as designed
 
