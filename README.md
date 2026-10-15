@@ -216,6 +216,40 @@ languages you prefer, and turns off the rest:
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
 ```
 
+Keyboard and seek bar
+---------------------
+
+In a player of your own, the `controls` namespace gives the keyboard the
+handlers of the lock screen. Its keys work only while the focus is in
+the player, as WCAG asks of shortcuts of a single key: the space bar and
+k play and pause, j and l and the arrows skip, and the media keys do what
+they say.
+
+```clojure
+(require '[dk.simongray.play-nice.controls :as controls])
+
+(def handlers
+  (session/element-actions audio {:seekbackward 10 :seekforward 30}))
+
+(session/actions! handlers)
+
+(def stop!
+  (controls/listen! player audio handlers))
+```
+
+A seek bar of your own takes its ARIA attributes from `seek-aria`, with
+the position in words for a screen reader, and its keys from
+`seek-bar-keys`:
+
+```clojure
+[:div (merge {:aria-label "Position" :tabindex 0}
+             (controls/seek-aria (media/state audio)))]
+;; with {:role "slider" :aria-valuenow 750
+;;       :aria-valuetext "12 minutes, 30 seconds" …}
+
+(controls/listen! seek-bar audio handlers controls/seek-bar-keys)
+```
+
 What the browser can play
 -------------------------
 

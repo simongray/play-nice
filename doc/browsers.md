@@ -139,6 +139,20 @@ a src fails to load, and the cues follow once it has loaded, since Chrome
 and WebKit drop the cues added before.
 
 
+## Shortcuts only in the player
+
+A shortcut of a single key that types a character must work only while
+its part of the page has the focus, unless the user can turn it off or
+remap it, as WCAG 2.2 asks. Following the keys pressed in the player
+meets that without a settings page. So `listen!` follows them there, and
+calls the handlers of the lock screen, so that a key and a button of the
+lock screen do the same.
+
+The keys still belong to the page where it uses them itself: in a field,
+on a button that the space bar presses, and on a seek bar of its own,
+whose arrows move it by a second rather than skip.
+
+
 ## Two answers about what plays
 
 Media Capabilities is the newer way to ask whether a browser can play a

@@ -357,6 +357,60 @@ variants, e.g. "en" matches "en-GB". Without `:languages`, no track
 matches, and all of those kinds turn off.
 
 
+## Keyboard and seek bar
+
+The `controls` namespace follows the
+[UI Events](https://w3c.github.io/uievents-key/) key values, WCAG 2.2's
+[character key shortcuts](https://www.w3.org/TR/WCAG22/#character-key-shortcuts),
+and the APG's
+[Media Seek Slider](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/).
+
+### Keys
+
+A keymap is a map from a key, as the `key` of a KeyboardEvent names it,
+to an action, or to a function from the element's state to the details
+of the action. `listen!` takes `player-keys` by default:
+
+| Keys | Action |
+|---|---|
+| Space, `k`, `MediaPlayPause` | `:play` while the element is paused, and `:pause` otherwise |
+| `MediaPlay`, `MediaPause`, `MediaStop` | `:play`, `:pause`, `:stop` |
+| `j`, `ArrowLeft`, `MediaRewind` | `:seekbackward` |
+| `l`, `ArrowRight`, `MediaFastForward` | `:seekforward` |
+| `MediaTrackPrevious`, `MediaTrackNext` | `:previoustrack`, `:nexttrack` |
+
+`seek-bar-keys` holds the keys of a seek bar, as `:seekto` actions:
+
+| Keys | Seek |
+|---|---|
+| `ArrowRight`, `ArrowUp` | A second forward |
+| `ArrowLeft`, `ArrowDown` | A second back |
+| `PageUp`, `PageDown` | 15 seconds forward or back |
+| `Home`, `End` | The start or the end |
+
+`listen!` leaves a key to the browser where the handlers have no action
+for it. It also leaves alone a key with Alt, Ctrl or Meta, one that a
+handler has prevented already, typing in a field, and a space that
+presses a button. Holding a key down repeats only a seek.
+
+### Seek bar
+
+What `seek-aria` returns:
+
+| Key | Value |
+|---|---|
+| `:role` | "slider" |
+| `:aria-valuemin` | 0 |
+| `:aria-valuemax` | The duration in whole seconds, left out while it's unknown or infinite |
+| `:aria-valuenow` | The position in whole seconds |
+| `:aria-valuetext` | The position in words, from `value-text` |
+
+`value-text` writes the seconds with
+[Intl.DurationFormat](https://tc39.es/proposal-intl-duration-format/), in
+the locale you give or the browser's, e.g. "12 minutes, 30 seconds" or
+"12 minutter og 30 sekunder", and in English where it can't.
+
+
 ## Autoplay
 
 The `autoplay` namespace follows the
