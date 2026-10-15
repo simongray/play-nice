@@ -7,17 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### Replicant's life-cycle hooks run inside the render
-
-Loading the source and starting `watch!` in `:replicant/on-mount` calls
-the watcher at once, and the swap into the app's atom renders again in
-the middle of Replicant's render. Replicant queues that render and
-complains in development. The inspector does its mount in a microtask.
-
-- **Docs:** the guide to app state covers re-frame only. A short
-  section on Replicant, with on-mount as data and the microtask, would
-  have saved this.
-
 ### The seek bar speaks the browser's language, not the page's
 
 `seek-aria` writes the position in words in the browser's language by
@@ -116,6 +105,11 @@ plays everywhere.
   each answer. It's a function of its own rather than an option of
   `play!`, since the answer comes twice and `media` can't require
   `page.autoplay`, which requires it.
+- Replicant's life-cycle hooks run inside its render, so starting
+  `watch!` at a mount renders again in the middle of it, which Replicant
+  puts off and warns about. The Replicant section of the guide to app
+  state now loads and follows the element with hooks as data, and mounts
+  it in a microtask.
 
 ## What worked as designed
 

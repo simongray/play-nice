@@ -68,17 +68,43 @@ button, and the last has no next one.
 
 ## With Replicant
 
-Call `show!` in the watch that renders, and attach the element when it
-mounts:
+Call `show!` in the watch that renders, and load and follow the element
+when it mounts. With life-cycle hooks as data, your dispatch gets the
+element as `:replicant/node`:
 
 ```clojure
+(require '[dk.simongray.play-nice.media :as media]
+         '[replicant.dom :as r])
+
 (defonce detach!
   (atom (constantly nil)))
 
-[:audio {:replicant/on-mount   (fn [{:replicant/keys [node]}]
-                                 (reset! detach! (session/attach! node)))
-         :replicant/on-unmount (fn [_] (@detach!))}]
+(defn mount!
+  "Load the track at `src` into the media `element`, keep its state in the
+  app, and put it on the lock screen."
+  [element src]
+  (media/source! element {:src src})
+  (reset! detach! (juxt (media/watch! element #(swap! app assoc :player %))
+                        (session/attach! element))))
+
+(r/set-dispatch!
+ (fn [{:replicant/keys [node]} [action src]]
+   (case action
+     ;; after the render, since the swap of watch! renders again
+     :player/mounted   (js/queueMicrotask #(mount! node src))
+     :player/unmounted (@detach!))))
+
+[:audio {:replicant/key        src
+         :replicant/on-mount   [:player/mounted src]
+         :replicant/on-unmount [:player/unmounted]}]
 ```
+
+Replicant calls the hooks inside its render, and `watch!` calls its
+function at once, so a watch of the app that renders would render again
+in the middle of it. Replicant puts that render off to the next frame
+and warns "Triggered a render while rendering" in development, so the
+dispatch mounts the element in a microtask, once the render is done. The
+key gives each track an element of its own, so a new track mounts anew.
 
 ## With re-frame
 
