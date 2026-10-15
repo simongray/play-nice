@@ -3,15 +3,33 @@
   for an element's next event, and media files made in the test."
   (:require [clojure.test :refer [async is]]))
 
+(defn within
+  "The `promise`, or a promise rejected after `seconds` without an answer,
+  e.g. where an engine never settles a fullscreen request, named by the
+  `label`, so that a test fails rather than hangs."
+  [seconds label promise]
+  (js/Promise.race
+   #js [promise
+        (js/Promise. (fn [_ reject]
+                       (js/setTimeout #(reject (str label ": no answer in " seconds " s"))
+                                      (* 1000 seconds))))]))
+
 (defn run
   "Run the steps `fs` one after another as an async test. Each step is a
-  function of no arguments that returns a value or a promise.
+  function of no arguments that returns a value or a promise, which fails
+  the test after 12 seconds without an answer, so that a hang names its
+  step rather than stop the browser's other tests.
 
   A deftest runs only the async test that it returns, so it calls `run`
   once, as its last form."
   [& fs]
   (async done
-    (-> (reduce (fn [p f] (.then p (fn [_] (f)))) (js/Promise.resolve nil) fs)
+    (-> (reduce (fn [p [i f]]
+                  (.then p (fn [_]
+                             (within 12 (str "step " (inc i))
+                                     (js/Promise.resolve (f))))))
+                (js/Promise.resolve nil)
+                (map-indexed vector fs))
         (.catch (fn [e] (is false (str "rejected: " e))))
         (.finally done))))
 
@@ -23,17 +41,6 @@
   (js/Promise. (fn [resolve reject]
                  (.addEventListener element event resolve #js {:once true})
                  (js/setTimeout #(reject (str "no " event " in 10 s")) 10000))))
-
-(defn within
-  "The `promise`, or a promise rejected after `seconds` without an answer,
-  e.g. where an engine never settles a fullscreen request, named by the
-  `label`, so that a test fails rather than hangs."
-  [seconds label promise]
-  (js/Promise.race
-   #js [promise
-        (js/Promise. (fn [_ reject]
-                       (js/setTimeout #(reject (str label ": no answer in " seconds " s"))
-                                      (* 1000 seconds))))]))
 
 (defn silence
   "An object URL of a WAV file that holds a second of silence, as 8000
