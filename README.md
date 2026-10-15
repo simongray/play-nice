@@ -203,8 +203,7 @@ Only Chromium takes the chapters of the Media Session's metadata, but
 every browser follows a
 [text track](https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API)
 of chapters, without showing it, and `tracks/watch!` says which chapter
-plays. Add the track once the metadata has loaded, since the last
-chapter lasts until the duration. For a video, `tracks/show!` shows the
+plays. For a video, `tracks/show!` shows the
 captions that best fit the languages you prefer. A page can't read the
 system's caption settings, so `captions/style!` turns the user's own
 style into [CSS for the captions](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::cue),
@@ -215,12 +214,12 @@ in the vocabulary of
 (require '[dk.simongray.play-nice.media.captions :as captions]
          '[dk.simongray.play-nice.media.tracks :as tracks])
 
-;; the chapters of an episode of 1830 seconds as a hidden track, whose
-;; active cue is the chapter that plays
+;; the chapters of an episode as a hidden track, whose active cue is the
+;; chapter that plays; without a duration, the last lasts to the end
 (tracks/add! audio {:kind :chapters
                     :cues (tracks/chapter-cues [{:title "Intro" :start-time 0}
                                                 {:title "News" :start-time 95}]
-                                               1830)})
+                                               nil)})
 
 ;; a video's captions or subtitles in Danish, or else in English
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})

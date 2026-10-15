@@ -20,11 +20,13 @@
 ;; HTML Living Standard, §4.8.11.11.5, TextTrackCue, and WebVTT, §7.1, VTTCue
 (defn cues
   "The `cue-list`, a TextTrackCueList, as a vector of maps of each cue's
-  :start-time, :end-time and :text, and its :id where it has one."
+  :start-time, :end-time and :text, and its :id where it has one. A cue
+  that lasts to the end of the media, as add! writes one, ends at ##Inf."
   [^js cue-list]
   (mapv (fn [^js cue]
           (cond-> {:start-time (.-startTime cue)
-                   :end-time   (.-endTime cue)
+                   :end-time   (let [end (.-endTime cue)]
+                                 (if (>= end js/Number.MAX_VALUE) ##Inf end))
                    :text       (.-text cue)}
             (not-empty (.-id cue)) (assoc :id (.-id cue))))
         (some-> cue-list js/Array.from)))
@@ -92,15 +94,15 @@
 (defn chapter-cues
   "The cues of a chapters track for the `chapters` of a media of `duration`
   seconds, e.g. the :chapter-info of the session's metadata. Each chapter
-  lasts until the next one starts, and the last until the end, so give
-  the duration once it's known, since add! leaves out a cue that has no
-  finite end:
+  lasts until the next one starts, and the last until the end, at the
+  duration, or at ##Inf while the duration is nil or unknown, e.g. before
+  the metadata has loaded:
 
       (chapter-cues [{:title \"Intro\" :start-time 0}
                      {:title \"News\" :start-time 95}]
-                    1830)
+                    nil)
       ;; => [{:start-time 0 :end-time 95 :text \"Intro\"}
-      ;;     {:start-time 95 :end-time 1830 :text \"News\"}]"
+      ;;     {:start-time 95 :end-time ##Inf :text \"News\"}]"
   [chapters duration]
   (let [chapters (sort-by #(or (:start-time %) 0) chapters)
         starts   (map #(or (:start-time %) 0) chapters)]
@@ -108,15 +110,18 @@
             {:start-time start :end-time end :text (or title "")})
           chapters
           starts
-          (concat (rest starts) [duration]))))
+          (concat (rest starts)
+                  [(if (js/Number.isFinite duration) duration ##Inf)]))))
 
+;; WebVTT lets a cue end at Infinity, which Firefox 157 refuses
 (defn- vtt-cue
   "A VTTCue of the `cue`, a map of its :start-time, :end-time, :text and
   :id, or nil where the browser refuses it, e.g. for a start time that
-  isn't finite."
+  isn't finite. An end at ##Inf is the largest number."
   [{:keys [start-time end-time text id] :as cue}]
   (try
-    (let [^js c (js/VTTCue. start-time end-time (str text))]
+    (let [end    (if (= ##Inf end-time) js/Number.MAX_VALUE end-time)
+          ^js c (js/VTTCue. start-time end (str text))]
       (when id
         (set! (.-id c) id))
       c)
@@ -134,7 +139,8 @@
   The :kind is :subtitles and the :mode is :hidden by default, which
   follows the cues without showing them. The cues are maps of their
   :start-time, :end-time and :text, and the call leaves out those that the
-  browser refuses, e.g. for a start time that isn't finite.
+  browser refuses, e.g. for a start time that isn't finite. A cue that
+  ends at ##Inf lasts to the end of the media, however long it turns out.
 
   The track comes from a track element, since a track from addTextTrack
   can never be removed. The cues follow once the element has loaded, since

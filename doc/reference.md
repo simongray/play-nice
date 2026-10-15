@@ -207,14 +207,16 @@ What `text-tracks` returns for each track, and `watch!` passes on:
 | Key | Value |
 |---|---|
 | `:start-time` | Seconds from the start. Required. |
-| `:end-time` | Seconds from the start. Required. |
+| `:end-time` | Seconds from the start, or `##Inf` to the end of the media. Required. |
 | `:text` | The text, e.g. the title of a chapter |
 | `:id` | A string, left out when it's empty |
 
 `add!` leaves out the cues that the browser refuses, e.g. one whose start
-time isn't finite. `chapter-cues` makes one cue of each chapter of the
-session's metadata, from its `:start-time` to the next chapter's, and
-from the last to the duration.
+time isn't finite. It writes an end of `##Inf` as the largest number,
+since Firefox refuses an infinite end, and `cues` reads it back as
+`##Inf`. `chapter-cues` makes one cue of each chapter of the session's
+metadata, from its `:start-time` to the next chapter's, and from the last
+to the duration, or to `##Inf` while the duration is unknown.
 
 ### Choosing a track
 

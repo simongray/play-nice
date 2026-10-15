@@ -58,7 +58,14 @@
   (is (= [{:start-time 0 :end-time 1830 :text ""}]
          (tracks/chapter-cues [{}] 1830))
       "with the defaults of the session's chapters")
-  (is (= [] (tracks/chapter-cues [] 1830))))
+  (is (= [] (tracks/chapter-cues [] 1830)))
+  (is (= [{:start-time 0 :end-time 95 :text "Intro"}
+          {:start-time 95 :end-time ##Inf :text "News"}]
+         (tracks/chapter-cues [{:title "Intro" :start-time 0}
+                               {:title "News" :start-time 95}]
+                              nil))
+      "the last to the end, while the duration is unknown")
+  (is (= ##Inf (:end-time (last (tracks/chapter-cues [{:start-time 0}] ##NaN))))))
 
 (deftest showing-a-track
   (let [chapters (track "chapters" "" "hidden")

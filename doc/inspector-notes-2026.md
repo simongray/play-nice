@@ -7,17 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### The last chapter needs the duration before the metadata
-
-`chapter-cues` ends the last chapter at the duration, and `add!` leaves
-out a cue without a finite end. The chapters come from the server before
-the element knows its duration, so the inspector uses the duration that
-the feed declares, and without it the last chapter would be lost.
-
-- **Library:** let the last cue end at the end of the media however long
-  it turns out, e.g. by adding it again at `durationchange`, or say in
-  `chapter-cues` how to wait for the duration.
-
 ### Feeds call Ogg Opus audio/opus, which no engine accepts
 
 The item page asks the browser about each file of an episode. Buzzsprout
@@ -80,6 +69,13 @@ plays everywhere.
   kinds and languages, so the inspector read the transcript's language
   back from the element and passed it in. `show!` now takes a `:label`,
   which matches in any language unless `:languages` narrow it.
+- The last chapter needed the duration before the metadata: the
+  inspector's chapters come from the server before the element knows its
+  duration, and `add!` left out a cue without a finite end.
+  `chapter-cues` now ends the last chapter at `##Inf` without a duration.
+  WebVTT lets a cue end at Infinity, which Chrome and WebKit accept but
+  Firefox 157 refuses, so `add!` writes it as the largest number, and
+  `cues` reads that back as `##Inf`.
 
 ## What worked as designed
 

@@ -66,6 +66,18 @@
          #(is (= [] (last @states)) "removed, unlike a track from addTextTrack")
          #(@stop!))))
 
+(deftest the-last-chapter-to-the-end
+  (let [^js v (muted-video)]
+    (tracks/add! v {:kind :chapters
+                    :cues (tracks/chapter-cues [{:title "A" :start-time 0}
+                                                {:title "B" :start-time 1}]
+                                               nil)})
+    (run #(loaded v)
+         #(is (= [{:start-time 0 :end-time 1 :text "A"}
+                  {:start-time 1 :end-time ##Inf :text "B"}]
+                 (tracks/cues (.-cues ^js (aget (.-textTracks v) 0))))
+              "kept in every engine, and read back as ##Inf"))))
+
 (deftest refused-cues
   (let [^js v (muted-video)]
     (tracks/add! v {:cues [{:start-time 0 :end-time 1 :text "kept"}
