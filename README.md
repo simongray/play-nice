@@ -216,6 +216,18 @@ languages you prefer, and turns off the rest:
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
 ```
 
+A page can't read the system's caption settings, so keep the user's own
+style and give it to `captions/style!`. It turns the settings that the
+FCC's rule for caption displays names, e.g. the size, colour and edges,
+into CSS for that video:
+
+```clojure
+(require '[dk.simongray.play-nice.captions :as captions])
+
+(def remove-style!
+  (captions/style! video {:font-scale 1.5 :color :yellow :edge :drop-shadow}))
+```
+
 Picture-in-Picture
 ------------------
 

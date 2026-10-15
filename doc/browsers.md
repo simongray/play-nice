@@ -175,6 +175,19 @@ called it counts only while it's handled. Only a video without its
 metadata waits for it first, as Media Chrome does.
 
 
+## Caption sizes in percent
+
+A page can't read the system's caption settings, so the user's style
+has to live in the app, and `captions` turns it into the CSS of `::cue`,
+the one way to style captions that the browser draws. WebVTT sets the
+default size in `vh`, but in a page's CSS every engine reads `vh` as the
+page's viewport, not the video's, so a caption sized in `vh` would grow
+with the window. A percentage scales the browser's own size instead,
+which is also how the FCC's rule puts it, from 50% to 200% of the
+default. The edges of the letters are text shadows, the one way to draw
+them that `::cue` allows.
+
+
 ## The iPhone's fullscreen is the video's
 
 An iPhone has no fullscreen of an element, only of a video, in the

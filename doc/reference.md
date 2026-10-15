@@ -357,6 +357,37 @@ variants, e.g. "en" matches "en-GB". Without `:languages`, no track
 matches, and all of those kinds turn off.
 
 
+## Caption styles
+
+The `captions` namespace follows the settings of
+[47 CFR 79.103(c)](https://www.ecfr.gov/current/title-47/chapter-I/subchapter-C/part-79/subpart-B/section-79.103),
+the FCC's rule for caption displays, and the `::cue` pseudo-element of
+[WebVTT](https://www.w3.org/TR/webvtt1/#the-cue-pseudo-element).
+
+### Style
+
+A style is a map of these keys, each optional, which leaves the
+browser's own setting:
+
+| Key | Value | Of the rule |
+|---|---|---|
+| `:font-scale` | The size as a share of the browser's own, e.g. 1.5 | (c)(4), 50% to 200% |
+| `:font` | `:default`, `:monospaced-serif`, `:proportional-serif`, `:monospaced-sans-serif`, `:proportional-sans-serif`, `:casual`, `:cursive` or `:small-capitals` | (c)(5), the fonts of CEA-708 |
+| `:color` | `:white`, `:black`, `:red`, `:green`, `:blue`, `:yellow`, `:magenta` or `:cyan`, or a hex code, e.g. "#ffcc00" | (c)(2) |
+| `:opacity` | From 0 to 1, e.g. 1 for opaque and 0.5 for semi-transparent | (c)(3) |
+| `:background-color` | As `:color`, black by default | (c)(6) |
+| `:background-opacity` | From 0 to 1, 0.8 by default, as WebVTT has it | (c)(6) |
+| `:edge` | `:none`, `:raised`, `:depressed`, `:uniform` or `:drop-shadow` | (c)(7) |
+| `:edge-color` | As `:color`, black by default | |
+
+The rule's caption window, its colour and opacity, have no counterpart
+in `::cue`.
+
+`css` returns the rule, e.g. `video::cue{font-size:150%}`, and
+`style!` adds it to the page for one video, and returns a function that
+removes it.
+
+
 ## Keyboard and seek bar
 
 The `controls` namespace follows the
@@ -648,6 +679,23 @@ and `watch!` followed it in and out:
 
 The iOS simulator has no Picture-in-Picture either: it refuses every video
 with NotSupportedError, although an iPhone has it.
+
+### Caption styles
+
+Rendered on 15 October 2026 in a caption of a video, and measured on
+screenshots, in Chrome 153 on macOS and in Playwright's Firefox and
+WebKit:
+
+| Through `::cue` | Chrome | Firefox | WebKit |
+|---|---|---|---|
+| `color`, `font-size` in percent, `text-shadow`, `outline` | Applied | Applied | Applied |
+| `background-color` | Ignored, even with `!important` | Applied | Applied |
+| `font-variant: small-caps` | Ignored | Applied | Applied |
+| A `font-size` in `vh` | Relative to the page's viewport, not the video's | Likewise | Likewise |
+
+Chrome takes the background of a caption only through
+`::-webkit-media-text-track-display`, which covers the whole band of the
+captions across the video rather than the box behind the text.
 
 ### Fullscreen
 
