@@ -858,9 +858,9 @@ A file with `#t=0.5`, over HTTP or as a blob URL, tried on 15 October
 
 ### Embedding
 
-What the document of an iframe from another origin reports, tried on 15
-October 2026 through Playwright, in Safari 26.3, and in the iOS
-simulator:
+What an iframe from another origin may do, tried on 15 October 2026
+through Playwright with Chrome 155, in Firefox 158 and Safari 26.3, and
+in the iOS simulator:
 
 | `allow` | Chrome | Firefox | WebKit and Safari | Safari on iOS |
 |---|---|---|---|---|
@@ -868,8 +868,7 @@ simulator:
 | `fullscreen`, `fullscreen *` or `allowfullscreen` | Fullscreen | Fullscreen | Fullscreen | – |
 | `fullscreen 'none'` with `allowfullscreen` | No fullscreen | No fullscreen | No fullscreen | – |
 | `picture-in-picture 'none'` | No Picture-in-Picture | No Picture-in-Picture | Picture-in-Picture all the same | – |
-
-Chrome 153 doesn't know `media-playback-while-not-visible` yet.
+| `media-playback-while-not-visible 'none'` | Pauses the frame's media, muted or not, once the frame has `display: none`, `visibility: hidden` or no size, though not once it's off screen, and leaves it paused | Plays on | Plays on | Not tried |
 
 ### Safari on iOS
 
