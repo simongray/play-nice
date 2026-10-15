@@ -12,6 +12,21 @@
   (when (zero? (.-readyState element))
     (next-event element "loadedmetadata")))
 
+(defn known-duration
+  "A promise that the media `element` reports a duration above 0, or a
+  rejection after 10 seconds. WebKit on Linux reports 0 at loadedmetadata
+  for the WAV of silence."
+  [^js element]
+  (js/Promise.
+   (fn [resolve reject]
+     (let [check! (fn check! [_]
+                    (when (pos? (.-duration element))
+                      (.removeEventListener element "durationchange" check!)
+                      (resolve true)))]
+       (.addEventListener element "durationchange" check!)
+       (js/setTimeout #(reject "no duration in 10 s") 10000)
+       (check! nil)))))
+
 (defn near?
   "Whether the seconds `x` and `y` differ by less than a hundredth, since
   WebKit seeks a little past, e.g. to 0.50005."
@@ -98,10 +113,10 @@
         stop!  (atom nil)]
     (run #(reset! stop! (media/watch! v (partial swap! states conj)))
          #(is (= [:idle] (map :status @states)))
-         ;; the metadata first, since an engine may resolve the play
-         ;; promise before the duration is known, e.g. at 0
+         ;; the duration first, since WebKit on Linux knows it only after
+         ;; loadedmetadata, and may resolve the play promise before
          #(do (media/source! v {:src (silence)})
-              (metadata v))
+              (known-duration v))
          #(is (some (comp #{1} :duration) @states) "the metadata")
          #(media/play! v)
          #(is (false? (:paused (last @states))) "playing")
