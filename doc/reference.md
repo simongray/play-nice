@@ -223,7 +223,9 @@ each in the order you prefer. It shows the first track that matches,
 trying each kind for a language before the next language, and turns off
 the other tracks of those kinds. A language matches its regional
 variants, e.g. "en" matches "en-GB". Without `:languages`, no track
-matches, and all of those kinds turn off.
+matches, and all of those kinds turn off. With a `:label`, only a track
+of that label matches, in any language unless `:languages` narrow it,
+e.g. a track that you added with `add!`.
 
 
 ## Caption styles

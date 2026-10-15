@@ -78,6 +78,19 @@
     (is (= ["hidden" "disabled" "disabled"] (modes))
         "none, without languages")))
 
+(deftest showing-a-track-by-its-label
+  (let [added (doto (track "captions" "" "hidden") (unchecked-set "label" "Transcript"))
+        en    (doto (track "captions" "en" "showing") (unchecked-set "label" "English"))
+        el    (element en added)
+        modes #(mapv (fn [^js t] (.-mode t)) [en added])]
+    (is (= "Transcript" (:label (tracks/show! el {:kinds [:captions] :label "Transcript"})))
+        "in any language, here none")
+    (is (= ["disabled" "showing"] (modes)) "and the other captions off")
+    (is (nil? (tracks/show! el {:kinds [:captions] :label "Transcript" :languages ["da"]}))
+        "unless the languages leave it out")
+    (is (= ["disabled" "disabled"] (modes)))
+    (is (nil? (tracks/show! el {:kinds [:subtitles] :label "Transcript"})) "nor of another kind")))
+
 (defn track-list
   "A stand-in for a TextTrackList: an EventTarget that's array-like."
   []

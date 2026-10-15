@@ -7,17 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### Showing a track you added goes through languages
-
-The inspector adds the transcript with `tracks/add!` and shows it, as
-captions of a video, with `tracks/show!`. But `show!` chooses by kinds
-and languages, so the inspector reads the language back from the
-element's tracks and passes it in, and a transcript without a language
-needs the feed's. The app knows which track it wants, since it added it.
-
-- **Library:** let `show!` choose by label too, or let `add!` return the
-  track's own way to show and hide it.
-
 ### The last chapter needs the duration before the metadata
 
 `chapter-cues` ends the last chapter at the duration, and `add!` leaves
@@ -87,6 +76,10 @@ plays everywhere.
 - `listen!` takes the handlers as they are at the call, and the
   inspector's change with each episode, so it calls `listen!` again for
   each. Its docstring and the reference now say so.
+- Showing a track you added went through languages: `show!` chose by
+  kinds and languages, so the inspector read the transcript's language
+  back from the element and passed it in. `show!` now takes a `:label`,
+  which matches in any language unless `:languages` narrow it.
 
 ## What worked as designed
 

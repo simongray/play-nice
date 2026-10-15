@@ -187,16 +187,25 @@
   The language counts first, so Danish subtitles beat English captions,
   and a language includes its regional variants, e.g. \"en\" includes
   \"en-GB\". Without :languages, no track matches, which turns the kinds
-  off."
-  [^js element {:keys [kinds languages] :as prefs}]
+  off.
+
+  With a :label, only a track of that label matches, in any language
+  unless :languages narrow it, e.g. a track that you added yourself:
+
+      (show! video {:kinds [:captions] :label \"Transcript\"})"
+  [^js element {:keys [kinds languages label] :as prefs}]
   (let [kind     #(keyword (.-kind ^js %))
         of-kinds (filter (comp (set kinds) kind)
                          (some-> (.-textTracks element) js/Array.from))
-        chosen   (first (for [language languages
+        chosen   (first (for [language (or languages (when label [nil]))
                               k        kinds
                               ^js t    of-kinds
                               :when    (and (= k (kind t))
-                                            (language? language (.-language t)))]
+                                            (or (nil? label)
+                                                (= label (.-label t)))
+                                            (or (nil? language)
+                                                (language? language
+                                                           (.-language t))))]
                           t))]
     (doseq [^js t of-kinds
             :when (not (identical? t chosen))]
