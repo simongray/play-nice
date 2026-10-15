@@ -16,6 +16,11 @@ its default.
 The values of the spec's enums are keywords, spelled as the spec spells
 them, e.g. `:seekto` and `:media-source`.
 
+The maps of a media element have its attributes as keys, by the same
+rule, e.g. `:current-time` for `currentTime`. Its numbered states are
+keywords named after their constants, e.g. `:have-metadata` for
+`HAVE_METADATA`.
+
 
 ## The session
 
@@ -215,6 +220,110 @@ For a configuration of both audio and video, `:can-play-type` is the
 weaker of the two answers.
 
 
+## The media element
+
+The `media` namespace follows the
+[media elements](https://html.spec.whatwg.org/multipage/media.html)
+section of the HTML Living Standard.
+
+### State
+
+What `state` returns, and `watch!` passes on:
+
+| Key | Value |
+|---|---|
+| `:status` | The status below |
+| `:paused`, `:ended`, `:seeking`, `:muted` | Booleans |
+| `:ready-state` | `:have-nothing`, `:have-metadata`, `:have-current-data`, `:have-future-data` or `:have-enough-data` |
+| `:network-state` | `:empty`, `:idle`, `:loading` or `:no-source` |
+| `:current-time` | Seconds from the start |
+| `:duration` | Seconds, nil until the metadata has loaded, or `##Inf` for a live stream |
+| `:playback-rate` | E.g. 1.5 |
+| `:volume` | From 0 to 1 |
+| `:buffered`, `:seekable`, `:played` | Vectors of `[start end]` in seconds |
+| `:error` | Nil, or a map of the `:code` and the browser's `:message` |
+
+The code of an error is `:aborted`, `:network`, `:decode` or
+`:src-not-supported`, as
+[MediaError](https://html.spec.whatwg.org/multipage/media.html#mediaerror)
+numbers them.
+
+### Status
+
+The status is the first of these that applies:
+
+| Status | When |
+|---|---|
+| `:error` | The element has an error |
+| `:ended` | It has played to the end |
+| `:buffering` | It isn't paused, it's loading, and it has no data past the current position, as for the [`:buffering`](https://html.spec.whatwg.org/multipage/semantics-other.html#selector-buffering) pseudo-class |
+| `:idle` | It has no metadata |
+| `:ready` | Otherwise |
+
+The status doesn't say whether the element plays, since `:paused` does.
+
+### Answers
+
+What the promise of `play!` resolves to:
+
+| Answer | When |
+|---|---|
+| `{:playing true}` | The element plays |
+| `{:playing true :muted true}` | It plays muted, with `:muted-fallback`, since the browser refused its sound |
+| `{:refused :not-allowed}` | The page may not play it, e.g. before the user has clicked |
+| `{:refused :not-supported}` | Its source won't play |
+| `{:superseded true}` | A pause or a new source came first |
+
+`switch-source!` answers `{:paused true}` for an element that was
+paused, and otherwise as `play!` does.
+
+### Sources
+
+The map of `source!`:
+
+| Key | Value |
+|---|---|
+| `:src` | The URL. Required. |
+| `:position` | Seconds from the start, where the element starts once its metadata has loaded |
+| `:playback-rate` | The rate, which `rate!` sets |
+
+### Rates
+
+`rate!` keeps the rate within 1/16 and 16, which every engine plays, and
+returns e.g. `{:playback-rate 16 :refused 20}` for a rate outside them. A
+rate that isn't finite leaves the rate as it was.
+
+### Options
+
+| Option | Of | Value |
+|---|---|---|
+| `:events` | `watch!` | The events to read the state at, `media/events` by default, which leaves out `timeupdate` |
+| `:muted-fallback` | `play!` | True to play muted where the browser refuses the sound |
+| `:preserves-pitch` | `rate!` | False to let the pitch follow the rate |
+
+
+## Autoplay
+
+The `autoplay` namespace follows the
+[Autoplay Policy Detection](https://www.w3.org/TR/autoplay-detection/)
+Working Draft of 4 September 2025, and
+[user activation](https://html.spec.whatwg.org/multipage/interaction.html#tracking-user-activation)
+in the HTML Living Standard.
+
+`policy` returns `:allowed`, `:allowed-muted` or `:disallowed` for a
+media element, an AudioContext, or the kind of either, `:mediaelement`
+or `:audiocontext`. It returns nil where the browser has no
+`getAutoplayPolicy`, i.e. outside Firefox.
+
+`on-activation!` calls its function at once where the page has
+transient activation, and otherwise at the first of
+`autoplay/activation-events` that activates the page.
+
+| Option | Value |
+|---|---|
+| `:window` | The window to ask and to listen at, e.g. a stand-in in a test. The page's by default. |
+
+
 ## What each engine refuses
 
 Tried on 12 October 2026 in Chrome 153, Firefox 157 and WebKit 27.2,
@@ -274,6 +383,17 @@ Tried on 15 October 2026, in the same versions. In all three, an element
 whose file won't play keeps `paused` false after the error, which is why
 `attach!` follows `error`. Firefox rejects the promise of `play()` before
 it fires `error`.
+
+All three start a new source at a position set right after its `src`,
+which `source!` relies on. Their playback rates differ, and `rate!` keeps
+every rate within 1/16 and 16:
+
+| Playback rate | Chrome | Firefox | WebKit |
+|---|---|---|---|
+| 0, or 1/16 to 16 | Accepted | Accepted | Accepted |
+| Above 0 and below 1/16, or above 16 | NotSupportedError | Accepted | Accepted |
+| Below 0 | NotSupportedError | NotSupportedError | Accepted |
+| A default rate outside 1/16 to 16 | Ignored | Kept within 1/16 and 16, or an exception below 0 | Accepted |
 
 
 ## Browser support

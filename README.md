@@ -18,6 +18,9 @@ it.
 - **In step with a media element.** The session shows whether the
   element plays, and where it is when the browser can't tell by itself.
   Detaching hands both back to the browser.
+- **The media element as data.** Its state is a map, and playing it
+  returns the browser's answer, e.g. `{:refused :not-allowed}`, rather
+  than a promise that rejects.
 
 > This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
 > a library for making podcast software, where it puts the episode that
@@ -127,6 +130,47 @@ player without a media element, e.g. on Web Audio, call `position!` and
 `playback-state!` yourself, as
 [How to put a Web Audio player on the lock screen](doc/web-audio.md)
 shows.
+
+The media element
+-----------------
+
+The `media` namespace plays the element and reads its state as a map.
+Playing returns a promise of the browser's answer, which never rejects:
+
+```clojure
+(require '[dk.simongray.play-nice.media :as media])
+
+(-> (media/play! audio)
+    (.then prn))
+;; prints {:playing true}, or e.g. {:refused :not-allowed} before the
+;; user has clicked
+```
+
+Where the browser refuses, `{:muted-fallback true}` plays the element
+muted instead, and `autoplay/on-activation!` calls a function at the
+user's next click, tap or key press.
+
+To start an episode where the listener left off, give `source!` the
+position and the rate along with the file. It sets them in the order
+that the browser needs, since a new source resets the rate:
+
+```clojure
+(media/source! audio {:src "/272.mp3" :position 754 :playback-rate 1.5})
+(media/play! audio)
+```
+
+To keep the element's state in your app's, give `watch!` a function. It
+calls the function with the state now and whenever it changes, and
+returns a function that stops it:
+
+```clojure
+(def stop!
+  (media/watch! audio #(swap! app assoc :player %)))
+;; :player is e.g. {:status :buffering :paused false :current-time 754.2
+;;                  :duration 3600 :playback-rate 1.5 …}
+```
+
+The [reference](doc/reference.md) describes the state and every answer.
 
 What the browser can play
 -------------------------

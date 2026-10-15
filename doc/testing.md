@@ -79,3 +79,25 @@ To test the position in Safari's place, make `setPositionState` throw a
 TypeError for an empty map or an infinite duration, as WebKit does.
 `position!` then clears the state instead. play-nice's own browser tests
 do this, in `session_browser_test.cljs`.
+
+The functions of `media` take the same stand-in, with the attributes and
+methods they use, e.g. a `play` that returns a promise rejected with a
+NotAllowedError, as a browser's does before the user has clicked.
+
+## Test what waits for a click
+
+Give `autoplay/on-activation!` the option `:window` with an
+`EventTarget` whose `navigator` has a `userActivation` of your own. Set
+its `isActive` to true, and dispatch an event such as `pointerup`:
+
+```clojure
+(deftest after-a-click
+  (let [played     (atom false)
+        activation #js {:isActive false}
+        ^js window (js/EventTarget.)]
+    (set! (.-navigator window) #js {:userActivation activation})
+    (autoplay/on-activation! #(reset! played true) {:window window})
+    (set! (.-isActive activation) true)
+    (.dispatchEvent window (js/Event. "pointerup"))
+    (is (true? @played))))
+```

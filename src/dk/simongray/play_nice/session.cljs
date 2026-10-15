@@ -20,7 +20,8 @@
 
       (actions! (element-actions audio {:seekbackward 10
                                         :seekforward  10}))"
-  (:require [dk.simongray.play-nice.keys :as keys]))
+  (:require [dk.simongray.play-nice.keys :as keys]
+            [dk.simongray.play-nice.media :as media]))
 
 ;; W3C Media Session, Working Draft of 5 June 2026, §5, MediaSessionAction
 (def actions
@@ -293,16 +294,6 @@
      (set! (.-playbackState session) (name state))
      state)))
 
-;; HTML Living Standard, §4.8.11.1, MediaError
-(defn- element-error
-  "The error of the media `element` as a map of its :code and :message, or
-  nil while it has none, e.g. {:code :network}."
-  [^js element]
-  (when-let [^js e (.-error element)]
-    (cond-> {:code ({1 :aborted 2 :network 3 :decode 4 :src-not-supported}
-                    (.-code e))}
-      (not-empty (.-message e)) (assoc :message (.-message e)))))
-
 (defn- element-attributes
   "The attributes of the media `element` that a session follows."
   [^js element]
@@ -310,7 +301,7 @@
    :current-time  (.-currentTime element)
    :playback-rate (.-playbackRate element)
    :paused        (.-paused element)
-   :error         (element-error element)})
+   :error         (media/error element)})
 
 (defn element-actions
   "Handlers that play, pause, stop and seek the media `element` itself. The
@@ -333,10 +324,7 @@
                                         (element-attributes element)
                                         offsets)
                          (go! fast-seek)))]
-     (cond-> {:play   (fn [_]
-                        ;; the promise rejects where the browser won't play,
-                        ;; and nothing else would catch it
-                        (some-> (.play element) (.catch (constantly nil))))
+     (cond-> {:play   (fn [_] (media/play! element))
               :pause  (fn [_] (.pause element))
               :stop   (fn [_]
                         (.pause element)

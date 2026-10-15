@@ -1,9 +1,9 @@
 # The browsers' differences
 
-The Media Session and Media Capabilities look simple, but each engine
-implements its own part of them and throws where the others don't. This
-page explains how play-nice deals with the differences, and why. The
-research behind it, with its sources, is in
+The Media Session, Media Capabilities and the media element look simple,
+but each engine implements its own part of them and throws where the
+others don't. This page explains how play-nice deals with the
+differences, and why. The research behind it, with its sources, is in
 [the design of October 2026](design-2026.md), and the facts in the
 [reference](reference.md).
 
@@ -72,7 +72,41 @@ A fatal error fires only `error` at the media element, and leaves
 `paused` false. Every engine does that even for a file that won't play
 at all, so a session that follows `paused` alone keeps the lock screen
 on "playing". That's why `attach!` follows `error` too, and counts an
-element with an error as paused.
+element with an error as paused, while `media/state` gives it a status
+of its own.
+
+
+## Refusals to play are data
+
+The promise of `play()` rejects in three ways, and only two of them are
+failures. NotAllowedError means that the page may not play yet, and
+NotSupportedError that the file won't play. AbortError only means that a
+pause or a new source came first. A rejection that nobody handles shows
+up as an error in the console, so `play!` resolves to a map for each
+instead.
+
+Only Firefox can tell a page in advance whether it may play, so
+`autoplay/policy` returns nil elsewhere. The answer of `play!` is what
+works everywhere, and `on-activation!` waits for the click, tap or key
+press after which the browser lets the page play.
+
+
+## The source first, then the rest
+
+Setting `src` pauses the element without a pause event, and resets the
+rate to the default rate. A position set before the metadata has loaded
+is where every engine starts the new source. So `source!` sets the src,
+then the position, then the rate, which also makes a listener of
+`loadedmetadata` unnecessary. Such a listener seeks the wrong file when
+someone switches episode before the metadata arrives.
+
+
+## One range of rates
+
+Each engine accepts its own playback rates. Chrome throws outside 1/16
+to 16, Firefox only below 0, and WebKit never. So `rate!` keeps every
+rate within 1/16 and 16, and returns the rate that it refused, rather
+than throw in one engine and play at 20 times the speed in another.
 
 
 ## Two answers about what plays
@@ -102,8 +136,6 @@ string into "null", while a missing member gets its default.
 
 ## What's left out
 
-- **Autoplay Policy Detection.** Only Firefox ships it, so a function
-  over it would answer "don't know" in Chrome and Safari.
 - **Audio Session.** Only Safari ships it, and Chrome has no plans. Safari
   needs it to show a Web Audio player on the lock screen, which
   [How to put a Web Audio player on the lock screen](web-audio.md) does
