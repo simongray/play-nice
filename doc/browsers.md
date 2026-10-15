@@ -163,6 +163,18 @@ on a button that the space bar presses, and on a seek bar of its own,
 whose arrows move it by a second rather than skip.
 
 
+## One answer for each reason to refuse Picture-in-Picture
+
+Each engine refuses a video in its own words. A video that disables
+Picture-in-Picture throws an InvalidStateError in Chrome and Firefox and
+a NotSupportedError in WebKit, which throws that for other reasons too.
+So `enter!` checks the video itself first, and answers with one keyword
+for each reason, e.g. `:disabled` or `:no-video`, before it asks the
+browser. It asks at once, without awaiting anything, since the click that
+called it counts only while it's handled. Only a video without its
+metadata waits for it first, as Media Chrome does.
+
+
 ## Two answers about what plays
 
 Media Capabilities is the newer way to ask whether a browser can play a
@@ -194,8 +206,8 @@ string into "null", while a missing member gets its default.
   needs it to show a Web Audio player on the lock screen, which
   [How to put a Web Audio player on the lock screen](web-audio.md) does
   by hand.
-- **Picture-in-Picture and Remote Playback.** They matter for video, and
-  wait until a video app wants them.
+- **Remote Playback.** It matters for casting, and waits until an app
+  wants it.
 - **Document Picture-in-Picture, Media Source Extensions and Encrypted
   Media Extensions.** They're about windows, streaming and DRM rather
   than a player's place in the system.

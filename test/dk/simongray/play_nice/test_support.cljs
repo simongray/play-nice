@@ -65,3 +65,23 @@
   (doto (js/document.createElement "video")
     (set! -muted true)
     (set! -playsInline true)))
+
+(defn canvas-video
+  "A muted video in the page of a canvas's stream, which has a video track,
+  unlike the WAV of silence. The canvas draws for five seconds, since
+  WebKit loads no metadata from a canvas that doesn't."
+  []
+  (let [^js canvas (js/document.createElement "canvas")
+        ^js g      (.getContext canvas "2d")
+        ^js video  (muted-video)
+        n          (atom 0)
+        draw!      #(do (set! (.-fillStyle g) (if (even? (swap! n inc)) "#000" "#333"))
+                        (.fillRect g 0 0 320 180))
+        id         (js/setInterval draw! 50)]
+    (js/setTimeout #(js/clearInterval id) 5000)
+    (set! (.-width canvas) 320)
+    (set! (.-height canvas) 180)
+    (when (fn? (.-captureStream canvas))
+      (set! (.-srcObject video) (.captureStream canvas 10)))
+    (.appendChild js/document.body video)
+    video))

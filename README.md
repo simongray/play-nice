@@ -216,6 +216,30 @@ languages you prefer, and turns off the rest:
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
 ```
 
+Picture-in-Picture
+------------------
+
+For a video, the `picture-in-picture` namespace enters and leaves
+Picture-in-Picture, and answers with data rather than a promise that
+rejects. Call `enter!` in a click handler, since Chrome and WebKit refuse
+it without a click:
+
+```clojure
+(require '[dk.simongray.play-nice.picture-in-picture :as pip])
+
+(-> (pip/enter! video)
+    (.then prn))
+;; prints {:width 320 :height 180}, or e.g. {:refused :not-allowed}
+
+(def stop!
+  (pip/watch! video #(swap! app assoc :pip %)))
+;; :pip is e.g. {:picture-in-picture true :width 320 :height 180}
+```
+
+Chrome on a desktop also has a Picture-in-Picture button in its media
+controls, which calls the session's `:enterpictureinpicture` handler,
+e.g. `(fn [_] (pip/enter! video))`.
+
 Keyboard and seek bar
 ---------------------
 

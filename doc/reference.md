@@ -411,6 +411,37 @@ the locale you give or the browser's, e.g. "12 minutes, 30 seconds" or
 "12 minutter og 30 sekunder", and in English where it can't.
 
 
+## Picture-in-Picture
+
+The `picture-in-picture` namespace follows the
+[Picture-in-Picture](https://www.w3.org/TR/picture-in-picture/) Working
+Draft of 16 June 2026.
+
+### Answers
+
+What the promise of `enter!` resolves to:
+
+| Answer | When |
+|---|---|
+| `{:width 320 :height 180}` | The video is in Picture-in-Picture, in a window of that size |
+| `{:refused :not-allowed}` | The call wasn't in a click handler, or the page may not use it, from NotAllowedError or SecurityError |
+| `{:refused :not-supported}` | The browser has no Picture-in-Picture for it, e.g. for an audio element |
+| `{:refused :disabled}` | The video has `disablePictureInPicture` |
+| `{:refused :no-video}` | The video has no video track, e.g. it plays an audio file |
+
+`exit!` resolves to `{:picture-in-picture false}`, and does nothing for a
+video that isn't in Picture-in-Picture.
+
+### State
+
+What `watch!` passes on, at each enter, resize of the window and leave:
+
+| Key | Value |
+|---|---|
+| `:picture-in-picture` | Whether the video is in Picture-in-Picture |
+| `:width`, `:height` | The size of the window in pixels, while it's in it |
+
+
 ## Autoplay
 
 The `autoplay` namespace follows the
@@ -516,6 +547,24 @@ every rate within 1/16 and 16:
 | Removing the track element | Removes the track | Removes the track | Removes the track |
 
 `add!` adds its cues once the track element has loaded.
+
+### Picture-in-Picture
+
+Tried on 15 October 2026 through Playwright, with a video of a canvas's
+stream:
+
+| | Chrome | Firefox | WebKit |
+|---|---|---|---|
+| Before the metadata | InvalidStateError | InvalidStateError | InvalidStateError |
+| A video without a video track | InvalidStateError | InvalidStateError | InvalidStateError |
+| A video with `disablePictureInPicture` | InvalidStateError | InvalidStateError | NotSupportedError |
+| Without a click | NotAllowedError | Enters, early in a page's life, and NotAllowedError later | NotSupportedError at a page's first request, and NotAllowedError after |
+| `exitPictureInPicture` with no video in it | InvalidStateError | InvalidStateError | InvalidStateError |
+| leavepictureinpicture | Not seen | After `exitPictureInPicture` has resolved | Not seen |
+
+A real click may change the last rows, which only a person can make.
+The iOS simulator has no Picture-in-Picture: it refuses every video with
+NotSupportedError, although an iPhone has it.
 
 ### Safari on iOS
 
