@@ -119,6 +119,9 @@
      those that a handler took already, typing in a field, and a space that
      presses a button. Holding a key down repeats only a seek.
 
+     It keeps the `handlers` it was given, so where they change, e.g. with
+     each episode, stop it and call it again with the new ones.
+
      - :keymap, a map from each key to an action, or to a function from
        the element's state to the details of one, player-keys by default,
        or e.g. seek-bar-keys for a seek bar of its own. An action needs

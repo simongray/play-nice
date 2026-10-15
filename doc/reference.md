@@ -538,7 +538,8 @@ give it a `:keymap`:
 `listen!` leaves a key to the browser where the handlers have no action
 for it. It also leaves alone a key with Alt, Ctrl or Meta, one that a
 handler has prevented already, typing in a field, and a space that
-presses a button. Holding a key down repeats only a seek.
+presses a button. Holding a key down repeats only a seek. It keeps the
+handlers it was given, so call it again when they change.
 
 ### Seek bar
 

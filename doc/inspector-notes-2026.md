@@ -7,15 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### `listen!` takes the handlers as they are at the call
-
-The inspector's handlers close over the episode that plays, so it starts
-`listen!` again at each episode. That's fine, but an app that keeps its
-handlers in an atom has to know it.
-
-- **Docs:** say in `listen!`'s docstring that it keeps the handlers it
-  was given.
-
 ### Showing a track you added goes through languages
 
 The inspector adds the transcript with `tracks/add!` and shows it, as
@@ -93,6 +84,9 @@ plays everywhere.
   turns a pointer event on the bar and the element's state into the
   details of a seekto, which press the lock screen's handler, and the
   tutorial on your own controls drags with it under pointer capture.
+- `listen!` takes the handlers as they are at the call, and the
+  inspector's change with each episode, so it calls `listen!` again for
+  each. Its docstring and the reference now say so.
 
 ## What worked as designed
 
