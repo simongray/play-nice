@@ -149,11 +149,24 @@
                      (or (pos? seconds) (= 0 hours minutes))
                      (conj (unit seconds "second"))))))
 
+#?(:cljs
+   (defn- page-language
+     "The language of the page, as the lang of its html element names it,
+     or nil where it names none."
+     []
+     (when-let [lang (not-empty (some-> js/globalThis .-document
+                                        .-documentElement .-lang))]
+       (try
+         (first (js/Intl.getCanonicalLocales lang))
+         (catch :default _ nil)))))
+
 (defn value-text
   "The `seconds` in words for a screen reader, e.g. \"12 minutes, 30
-  seconds\" for 750, in the `locale`, by default the browser's, e.g.
-  \"12 minutter og 30 sekunder\" in \"da\". Where the browser has no
-  Intl.DurationFormat, and on the JVM, the words are English."
+  seconds\" for 750, in the `locale`, e.g. \"12 minutter og 30 sekunder\"
+  in \"da\". By default it's the language of the page, as the lang of its
+  html element names it, since the screen reader speaks the page's, or
+  else the browser's. Where the browser has no Intl.DurationFormat, and
+  on the JVM, the words are English."
   ([seconds]
    (value-text seconds nil))
   ;; the JVM has no DurationFormat, so English is all it writes
@@ -165,7 +178,7 @@
      #?(:clj  (english parts)
         :cljs (try
                 (.format (js/Intl.DurationFormat.
-                          (or locale js/undefined)
+                          (or locale (page-language) js/undefined)
                           #js {:style          "long"
                                :secondsDisplay (if (zero? s) "always" "auto")})
                          (clj->js parts))

@@ -16,6 +16,19 @@
     (.appendChild js/document.body p)
     p))
 
+(deftest the-language-of-the-page
+  (let [^js html js/document.documentElement
+        lang     (.-lang html)]
+    (set! (.-lang html) "da")
+    (is (= "12 minutter og 30 sekunder" (controls/value-text 750)))
+    (is (= "12 minutter og 30 sekunder"
+           (:aria-valuetext (controls/seek-aria {:current-time 750 :duration 3600}))))
+    (is (= "12 minutes, 30 seconds" (controls/value-text 750 "en")) "the locale you give first")
+    (set! (.-lang html) "not a language!")
+    (is (= (controls/value-text 750 js/undefined) (controls/value-text 750))
+        "the browser's, where the page's lang is no language")
+    (set! (.-lang html) lang)))
+
 (deftest keys-in-a-player
   (let [pressed  (atom [])
         handlers {:play         #(swap! pressed conj %)

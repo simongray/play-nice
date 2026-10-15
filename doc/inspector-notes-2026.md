@@ -7,17 +7,6 @@ it's a fair test of an app that isn't re-frame.
 
 ## Open
 
-### The seek bar speaks the browser's language, not the page's
-
-`seek-aria` writes the position in words in the browser's language by
-default. The inspector's page is in English, with `lang="en"`, and the
-browser is Danish, so the seek bar's value text was "58 minutter og 4
-sekunder", which a screen reader reads with the page's English voice.
-
-- **Library:** default to the language of the page, i.e. the closest
-  `lang` of the seek bar or the document's, and fall back to the
-  browser's. The locale argument stays for an app that knows better.
-
 ### A volume slider needs the level of a state, not of an element
 
 The bar renders from the state that `watch!` reports, as `seek-aria`
@@ -110,6 +99,13 @@ plays everywhere.
   puts off and warns about. The Replicant section of the guide to app
   state now loads and follows the element with hooks as data, and mounts
   it in a microtask.
+- The seek bar spoke the browser's language, not the page's: on the
+  inspector's English page in a Danish browser, its value text was "58
+  minutter og 4 sekunder", which a screen reader reads with the page's
+  English voice. `value-text`, and so `seek-aria`, now default to the
+  `lang` of the page's `html` element, and then to the browser's. It's
+  the page's rather than the seek bar's closest `lang`, since
+  `seek-aria` gets the element's state, not the bar.
 
 ## What worked as designed
 
