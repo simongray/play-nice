@@ -13,7 +13,9 @@ node test/simulator.mjs                # in Safari on an iOS simulator
 ```
 
 The browser tests play a real media element, and record each call on a
-stand-in session, which can throw as Safari does. CI runs them in your
-Chrome's channel and in Playwright's Firefox and WebKit, compiled with
-`release`, where a missing `^js` hint would show. With Xcode, the same
-build also runs in Safari on an iPhone simulator, which CI doesn't do.
+stand-in session, which can throw as Safari does. They run in your own
+Chrome, since Playwright's Chromium can't play AAC or H.264, and in
+Playwright's Firefox and WebKit. Like CI, the commands compile them with
+`release`, where a missing `^js` hint breaks a call that a development
+build would let through. With Xcode, the same build also runs in Safari
+on an iPhone simulator, which CI doesn't do.

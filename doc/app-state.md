@@ -1,10 +1,10 @@
 # How to keep the lock screen in step with your app's state
 
-Call `session/metadata!` and `session/actions!` whenever your app's state
-changes, and attach the media element once. You can call both as often
-as you like. The same metadata twice in a row does nothing, and
-`actions!` sets exactly the handlers it's given, clearing those that it
-set before.
+Attach the media element once, and call `session/metadata!` and
+`session/actions!` whenever your app's state changes. You can call both
+as often as you like. Setting the same metadata twice in a row does
+nothing, and `actions!` replaces the handlers it set before with those
+it's given.
 
 ## With an atom
 
@@ -62,14 +62,15 @@ Then attach the element, and show the state at every change:
 (show! @app audio)
 ```
 
-The track buttons only change the state, so the code that plays a track
-when `:playing` changes is your own. The first track has no previous
-button, and the last has no next one.
+The track buttons only change the state, so you write the code that
+plays a track when `:playing` changes.
 
 ## With Replicant
 
-Call `show!` in the watch that renders, and load and follow the element
-when it mounts. With life-cycle hooks as data, your dispatch gets the
+With [Replicant](https://github.com/cjohansen/replicant), call `show!`
+in the watch that renders the app, and load and follow the element when
+Replicant mounts it. A life-cycle hook given as data, e.g.
+`[:player/mounted src]`, reaches your dispatch function, which gets the
 element as `:replicant/node`:
 
 ```clojure
@@ -99,19 +100,22 @@ element as `:replicant/node`:
          :replicant/on-unmount [:player/unmounted]}]
 ```
 
-Replicant calls the hooks inside its render, and `watch!` calls its
-function at once, so a watch of the app that renders would render again
-in the middle of it. Replicant puts that render off to the next frame
-and warns "Triggered a render while rendering" in development, so the
-dispatch mounts the element in a microtask, once the render is done. The
-key gives each track an element of its own, so a new track mounts anew.
+Replicant calls the hooks inside its render. Since `watch!` calls its
+function at once, its swap would render the app again in the middle of
+that render. Replicant then puts the second render off to the next
+frame, and warns "Triggered a render while rendering" in development. So
+the dispatch mounts the element in a microtask, after the render. The
+`:replicant/key` gives each track an element of its own, so that a new
+track mounts anew.
 
 ## With re-frame
 
-Keep the media element out of the app's database, in an atom, and make
-what you do to it effects. The `:media` effect applies effects of
-`media/apply!`, and dispatches their answers when you name an event for
-them, e.g. to show that the browser refused to play:
+With [re-frame](https://day8.github.io/re-frame/), keep the media
+element in an atom rather than in the app's database, since an element
+isn't data. Then make what you do to it effects. The `:media` effect
+below applies effects of `media/apply!`. Where you name an event in
+`:on-answers`, it dispatches their answers to it, e.g. to show that the
+browser refused to play:
 
 ```clojure
 (require '[dk.simongray.play-nice.media :as media])
@@ -134,15 +138,16 @@ them, e.g. to show that the browser refused to play:
     (assoc db :answer answer)))
 ```
 
-Dispatch the click's event with `dispatch-sync`, e.g. `[:button
-{:on-click #(rf/dispatch-sync [:player/play-clicked])} "Play"]`, so that
-the browser gets the play while the click still lets the page play.
+Dispatch the click's event with `dispatch-sync`, e.g.
+`[:button {:on-click #(rf/dispatch-sync [:player/play-clicked])} "Play"]`,
+so that the browser gets the play while the click still lets the page
+play.
 
 Make the lock screen an effect too, and return it from the events that
 change what plays. Its buttons dispatch events, and
 `session/action-effects` turns a press into effects. The `:press` effect
-reads the element's state when it runs, since a state in the database is
-as old as the last event that it followed:
+reads the element's state when it runs, rather than from the database,
+where the state is only as new as the last event that stored it:
 
 ```clojure
 (rf/reg-fx :lock-screen
@@ -179,10 +184,11 @@ as old as the last event that it followed:
                            :handlers handlers}]]})))
 ```
 
-Attach the element in a ref callback, which React calls with nil when the
-element goes, and follow its state into the database. Define the
-callback once, since React calls a new function at every render, and the
-element would be detached and attached each time:
+Attach the element in a ref callback, which React calls with the
+element when it mounts and with nil when it goes. In the callback, also
+follow the element's state into the database. Define the callback once:
+if it were a new function at each render, React would call it at every
+render, and the element would be detached and attached each time:
 
 ```clojure
 (defonce detach!

@@ -1,9 +1,10 @@
 # Quickstart: a player on the lock screen
 
-In this tutorial we build a web page that plays a track and shows it in
-the browser's media controls, with its title, artist and cover, and
-buttons that skip ten seconds. You need the Clojure CLI, Chrome, an MP3
-and a square PNG.
+In this tutorial, we build a web page that plays a track and shows it in
+the browser's media controls, with its title, artist and cover. The
+controls get buttons that skip ten seconds back and forward. You need
+the [Clojure CLI](https://clojure.org/guides/install_clojure), Chrome,
+an MP3 and a square PNG.
 
 ## The project
 
@@ -16,8 +17,9 @@ Make a folder for the project, and put this in its `deps.edn`:
          dk.simongray/play-nice {:mvn/version "0.2.0"}}}
 ```
 
-Then this in its `shadow-cljs.edn`, for a build called `app` and a
-server for the folder `public`:
+Then put this in its `shadow-cljs.edn`. It defines a build called `app`
+and a web server for the folder `public`. Its `:deps true` makes
+shadow-cljs take the dependencies from `deps.edn`:
 
 ```clojure
 {:deps     true
@@ -27,7 +29,9 @@ server for the folder `public`:
                   :modules    {:main {:init-fn player.core/init}}}}}
 ```
 
-The page is `public/index.html`, with an audio element:
+The page is `public/index.html`. Its `<audio>` element has the
+`controls` attribute, so the browser shows its own play button and seek
+bar:
 
 ```html
 <!doctype html>
@@ -66,10 +70,13 @@ Put this in `src/player/core.cljs`:
                                    :type  "image/png"}]})))
 ```
 
-`attach!` keeps the media controls in step with the element, and with
-`:actions` it sets their buttons, which play, pause and skip it.
-`metadata!` shows the title, artist and cover. `support!` comes first,
-since it finds out what the browser supports by clearing each button.
+The script calls `init` as soon as it has loaded, since the `:init-fn`
+in `shadow-cljs.edn` names it. First, `init` logs what the browser
+supports, from `support!`. Then `attach!` keeps the media controls in
+step with the element, e.g. they show the track as paused when it
+pauses. With `:actions`, it also sets their buttons, which play, pause
+and skip the element. Last, `metadata!` shows the title, the artist and
+the cover.
 
 ## Run it
 
@@ -80,8 +87,9 @@ clojure -M -m shadow.cljs.devtools.cli watch app
 ```
 
 The first build takes a minute or two. When it says
-`[:app] Build completed.`, open <http://localhost:8080> in Chrome and its
-developer console. The console shows what the browser supports, e.g.
+`[:app] Build completed.`, open <http://localhost:8080> in Chrome, and
+open its developer console. The console shows what the browser
+supports, e.g.
 
 ```clojure
 {:actions #{:play :pause :seekto :seekbackward :seekforward …}

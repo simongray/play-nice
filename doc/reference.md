@@ -1,7 +1,9 @@
 # Reference
 
 This page describes the data that play-nice takes and returns, and what
-each engine refuses. The docstrings describe the functions.
+each engine refuses. The docstrings, e.g. on
+[cljdoc](https://cljdoc.org/d/dk.simongray/play-nice), describe the
+functions.
 
 
 ## Namespaces
@@ -28,8 +30,8 @@ The namespaces are under `dk.simongray.play-nice`:
 
 Of these, `media.fragment`, `media.captions`, `controls`, `page.embed`
 and `schema` also run on the JVM, e.g. to write a page on the server. Of
-their functions, only `captions/style!` and `controls/listen!` need a
-browser.
+their functions, only `captions/style!`, `controls/listen!` and
+`controls/pointer-seek` need a browser.
 
 
 ## Keys and values
@@ -107,8 +109,8 @@ What the promise of `play!` resolves to:
 | `{:refused :not-supported}` | Its source won't play |
 | `{:superseded true}` | A pause or a new source came first |
 
-`switch-source!` answers `{:paused true}` for an element that was
-paused, and otherwise as `play!` does.
+For an element that was paused, `switch-source!` answers
+`{:paused true}`, and otherwise it answers as `play!` does.
 
 ### Effects
 
@@ -142,16 +144,17 @@ The map of `source!`:
 
 ### Rates
 
-`rate!` keeps the rate within 1/16 and 16, which every engine plays, and
-returns the rate you asked for as `:requested` where it had to change
-it, e.g. `{:playback-rate 16 :requested 20}`. A rate that isn't a finite
-number leaves the rate as it was, and answers e.g. `{:playback-rate 1.5
-:refused :not-finite}`. `volume!` and `seek!` answer in the same way, so
-`:refused` is always a keyword that names the reason.
+The rate that `rate!` sets stays within 1/16 and 16, which every engine
+plays. Where it had to change the rate, the answer has the rate you
+asked for as `:requested`, e.g. `{:playback-rate 16 :requested 20}`. A
+rate that isn't a finite number leaves the rate as it was, and answers
+e.g. `{:playback-rate 1.5 :refused :not-finite}`. Both `volume!` and
+`seek!` answer in the same way, so `:refused` is always a keyword that
+names the reason.
 
 ### Volume
 
-`volume!` takes the level of a volume slider, from 0 to 1, and sets the
+From the level of a volume slider, from 0 to 1, `volume!` sets the
 volume on one of `curves`:
 
 | Curve | Volume of a level | Level of a volume |
@@ -159,13 +162,13 @@ volume on one of `curves`:
 | `:linear` | The level | The volume |
 | `:cubic` | The level cubed, e.g. 0.125 for 0.5 | The cube root |
 
-`level` returns the slider's level of the volume of an element or of
-its state, on the `:curve` you give it, so a view that renders the state
-needs no element. Where the
-browser locks the volume, as an iPhone does, an element plays at the
-system's volume although its `volume` returns what the page set, as HTML
-allows. `volume-locked!` resolves to true there, from the `volumechange`
-that a locked volume doesn't fire.
+For the volume of an element, or of its state, `level` returns the
+slider's level on the `:curve` you give it. So a view that renders the
+state needs no element. Where the browser locks the volume, as an iPhone
+does, an element plays at the system's volume, although its `volume`
+returns what the page set, as HTML allows. There, `volume-locked!`
+resolves to true, since it waits for a `volumechange` that a locked
+volume doesn't fire.
 
 ### Options
 
@@ -198,9 +201,9 @@ What `text-tracks` returns for each track, and `watch!` passes on:
 | `:mode` | `:disabled`, `:hidden` or `:showing` |
 | `:active-cues` | A vector of the cues that are active now, none while the track is disabled |
 
-`add!` takes the same keys, but `:cues` for all the cues instead of
-`:active-cues`. Its `:kind` is `:subtitles` by default, and its `:mode`
-`:hidden`, which follows the cues without showing them.
+The map of `add!` has the same keys, but `:cues` with all the cues
+instead of `:active-cues`. Its `:kind` is `:subtitles` by default, and
+its `:mode` is `:hidden`, which follows the cues without showing them.
 
 ### Cues
 
@@ -211,23 +214,25 @@ What `text-tracks` returns for each track, and `watch!` passes on:
 | `:text` | The text, e.g. the title of a chapter |
 | `:id` | A string, left out when it's empty |
 
-`add!` leaves out the cues that the browser refuses, e.g. one whose start
-time isn't finite. It writes an end of `##Inf` as the largest number,
-since Firefox refuses an infinite end, and `cues` reads it back as
-`##Inf`. `chapter-cues` makes one cue of each chapter of the session's
-metadata, from its `:start-time` to the next chapter's, and from the last
-to the duration, or to `##Inf` while the duration is unknown.
+The function `add!` leaves out the cues that the browser refuses, e.g.
+one whose start time isn't finite. It writes an end of `##Inf` as the
+largest number, since Firefox refuses an infinite end, and `cues` reads
+that back as `##Inf`. For the chapters of the session's metadata,
+`chapter-cues` makes one cue each, from its `:start-time` to the next
+chapter's. The last one lasts to the duration, or to `##Inf` while the
+duration is unknown.
 
 ### Choosing a track
 
-`show!` takes a map of the `:kinds` and the `:languages` that you accept,
-each in the order you prefer. It shows the first track that matches,
-trying each kind for a language before the next language, and turns off
-the other tracks of those kinds. A language matches its regional
-variants, e.g. "en" matches "en-GB". Without `:languages`, no track
-matches, and all of those kinds turn off. With a `:label`, only a track
-of that label matches, in any language unless `:languages` narrow it,
-e.g. a track that you added with `add!`.
+To choose a track, `show!` takes a map of the `:kinds` and the
+`:languages` that you accept, each in the order that you prefer. It
+shows the first track that matches, and turns off the other tracks of
+those kinds. It tries each kind for a language before the next language.
+A language matches its regional variants, e.g. "en" matches "en-GB".
+Without `:languages`, no track matches, and all tracks of those kinds
+turn off. With a `:label`, only a track of that label matches, in any
+language unless `:languages` narrow it, e.g. a track that you added with
+`add!`.
 
 
 ## Caption styles
@@ -239,8 +244,8 @@ the FCC's rule for caption displays, and the `::cue` pseudo-element of
 
 ### Style
 
-A style is a map of these keys, each optional, which leaves the
-browser's own setting:
+A style is a map of these keys. Each is optional, and a key left out
+keeps the browser's own setting:
 
 | Key | Value | Of the rule |
 |---|---|---|
@@ -253,12 +258,12 @@ browser's own setting:
 | `:edge` | `:none`, `:raised`, `:depressed`, `:uniform` or `:drop-shadow` | (c)(7) |
 | `:edge-color` | As `:color`, black by default | |
 
-The rule's caption window, its colour and opacity, have no counterpart
-in `::cue`.
+The FCC rule's caption window, with its colour and opacity, has no
+counterpart in `::cue`.
 
-`css` returns the rule, e.g. `video::cue{font-size:150%}`, and
-`style!` adds it to the page for one video, and returns a function that
-removes it.
+The function `css` returns the style as CSS, e.g.
+`video::cue{font-size:150%}`. To style one video, `style!` adds that CSS
+to the page, and returns a function that removes it.
 
 
 ## What the browser can play
@@ -326,8 +331,8 @@ What `decoding-info!` returns:
 For a configuration of both audio and video, `:can-play-type` is the
 weaker of the two answers.
 
-`decoding-info!` asks about a content type of `type-aliases` by the name
-that the engines know for its format, since they refuse the alias:
+For a content type in `type-aliases`, `decoding-info!` asks by the name
+that the engines know for the format, since they refuse the alias:
 
 | Alias | Asked as |
 |---|---|
@@ -342,11 +347,11 @@ The `media.fragment` namespace follows
 [Media Fragments URI 1.0 (basic)](https://www.w3.org/TR/media-frags/),
 a W3C Recommendation of 25 September 2012.
 
-`time` returns the interval of a URL's temporal fragment, its last valid
-`t`, as a map of its `:start` and `:end` in seconds, e.g. `{:start 73
-:end 133}` for `#t=npt:73,133`. The start is 0 where the fragment leaves
-it out, and the end is left out where the fragment does. The times are
-Normal Play Time, which `npt` reads:
+For a URL, `time` returns the interval of its temporal fragment, i.e. of
+its last valid `t`, as a map of the `:start` and `:end` in seconds, e.g.
+`{:start 73 :end 133}` for `#t=npt:73,133`. The start is 0 where the
+fragment leaves it out, and the map has no `:end` where the fragment has
+none. The times are in Normal Play Time, which `npt` parses:
 
 | Form | Example | Seconds |
 |---|---|---|
@@ -357,12 +362,14 @@ Normal Play Time, which `npt` reads:
 Minutes and seconds take two digits each. The SMPTE and clock formats of
 the advanced profile count as invalid.
 
-`link-time` returns the seconds of a page's `t` query parameter, in the
-forms `73`, `73s`, `1m13s`, `1h2m3s` and `01:13`.
+For the URL of a page, `link-time` returns the seconds of its `t` query
+parameter, which may take the forms `73`, `73s`, `1m13s`, `1h2m3s` and
+`01:13`.
 
-`session/clip-position` takes a map of a clip's `:start` and `:end`, e.g.
-from `time`, and the element map, and returns the position state within
-the clip. Without an `:end`, the clip ends with the file.
+For the lock screen, `session/clip-position` returns the position state
+within a clip. It takes a map of the clip's `:start` and `:end`, e.g.
+from `time`, and [the element map](#the-element-map). Without an `:end`,
+the clip ends with the file.
 
 
 ## The session
@@ -406,8 +413,9 @@ A chapter is a map of the keys of
 | `:start-time` | Seconds from the start, 0 by default |
 | `:artwork` | A vector of images |
 
-`metadata!` leaves out a chapter whose start time is negative, infinite
-or NaN, and an image whose `:src` is missing or doesn't parse as a URL.
+Before it sets the metadata, `metadata!` leaves out a chapter whose
+start time is negative, infinite or NaN, and an image whose `:src` is
+missing or doesn't parse as a URL.
 
 ### Actions
 
@@ -427,8 +435,9 @@ which `session/actions` holds:
 The handlers are a map of action to a function of the details. A nil
 function clears its action.
 
-`previous-track` returns `:previous` within the first 3 seconds of an
-item that has one before it, and `:restart` otherwise, as
+For the previous button, `previous-track` returns `:previous` within the
+first 3 seconds of an item that has an item before it, and `:restart`
+otherwise, as
 [Media3](https://developer.android.com/reference/androidx/media3/common/Player#seekToPrevious())
 does.
 
@@ -457,9 +466,9 @@ The position state is a map of the keys of
 | `:playback-rate` | 1 by default. A negative rate plays backwards, and 0 isn't allowed. |
 | `:position` | Seconds from the start, 0 by default, within 0 and the duration |
 
-`position-state` and `position!` count a rate of 0, or one that isn't
-finite, as 1, keep the position within the duration, and clear the state
-while the duration is unknown.
+Both `position-state` and `position!` count a rate of 0, or one that
+isn't finite, as 1. They keep the position within the duration, and
+clear the state while the duration is unknown.
 
 ### Playback state
 
@@ -469,10 +478,9 @@ has them.
 
 ### The element map
 
-The functions that follow a media element take its state, as
-`media/state` gives it, i.e. `element-position`, `element-state`,
-`seek-position` and the `:position-fn` of `attach!`. They read these
-keys of it:
+Some functions take the state of a media element, as `media/state`
+returns it: `element-position`, `element-state`, `seek-position` and the
+`:position-fn` of `attach!`. They read these keys:
 
 | Key | Attribute |
 |---|---|
@@ -482,8 +490,8 @@ keys of it:
 | `:paused` | [`paused`](https://html.spec.whatwg.org/multipage/media.html#dom-media-paused) |
 | `:error` | [`error`](https://html.spec.whatwg.org/multipage/media.html#dom-media-error), as a map of its `:code` and `:message`, or nil |
 
-`attach!` reads the state at the events of `session/element-events`,
-and counts an element with an error as paused.
+At each of `session/element-events`, `attach!` reads the state, and it
+counts an element with an error as paused.
 
 ### Options
 
@@ -497,16 +505,16 @@ and counts an element with an error as paused.
 | `:ignore-seek-offset` | `element-actions` | True to skip by those seconds even where the details have a `:seek-offset` |
 | `:track-buttons` | `element-actions` | `:skips` to make `:previoustrack` skip back and `:nexttrack` forward, where the skips have their seconds |
 
-The `:stop` of `element-actions` pauses the element where it is, as
-Media3's `Player.stop` keeps the position. Each of its handlers applies
-what `action-effects` returns for the press, the effects of
-`media/apply!` as data, e.g. `[[:seek 784]]` for a skip forward at 754,
-or `[]` for a press that doesn't touch the element.
+The `:stop` handler of `element-actions` pauses the element where it
+is, since Media3's `Player.stop` keeps the position too. Each of its
+handlers applies what `action-effects` returns for the press: effects of
+`media/apply!` as data, e.g. `[[:seek 784]]` for a skip of 30 seconds
+forward at 754, or `[]` for a press that doesn't touch the element.
 
 ### Support
 
-`support!` returns nil where the browser has no Media Session, and else a
-map:
+Where the browser has no Media Session, `support!` returns nil, and
+otherwise a map:
 
 | Key | Value |
 |---|---|
@@ -526,10 +534,10 @@ and the APG's
 ### Keys
 
 A keymap is a map from a key, as the `key` of a KeyboardEvent names it,
-to an action, or to a function from the element's state to the details
-of the action, which may be one of your own, e.g. `{"f" :fullscreen}`
-with a `:fullscreen` handler. `listen!` takes `player-keys` unless you
-give it a `:keymap`:
+to an action. Instead of an action, a key may map to a function from the
+element's state to the details of an action. An action may be one of
+your own, e.g. `{"f" :fullscreen}` with a `:fullscreen` handler. Unless
+you give it a `:keymap`, `listen!` uses `player-keys`:
 
 | Keys | Action |
 |---|---|
@@ -539,7 +547,7 @@ give it a `:keymap`:
 | `l`, `ArrowRight`, `MediaFastForward` | `:seekforward` |
 | `MediaTrackPrevious`, `MediaTrackNext` | `:previoustrack`, `:nexttrack` |
 
-`seek-bar-keys` holds the keys of a seek bar, as `:seekto` actions:
+For a seek bar, `seek-bar-keys` maps these keys to `:seekto` actions:
 
 | Keys | Seek |
 |---|---|
@@ -548,11 +556,12 @@ give it a `:keymap`:
 | `PageUp`, `PageDown` | 15 seconds forward or back |
 | `Home`, `End` | The start or the end |
 
-`listen!` leaves a key to the browser where the handlers have no action
-for it. It also leaves alone a key with Alt, Ctrl or Meta, one that a
-handler has prevented already, typing in a field, and a space that
-presses a button. Holding a key down repeats only a seek. It keeps the
-handlers it was given, so call it again when they change.
+Where the handlers have no action for a key, `listen!` leaves the key
+to the browser. It also leaves alone a key with Alt, Ctrl or Meta, one
+that a handler has prevented already, typing in a field, and a space
+that presses a button. Holding a key down repeats only a seek. Since
+`listen!` keeps the handlers it was given, stop it and call it again
+when they change.
 
 ### Seek bar
 
@@ -566,19 +575,19 @@ What `seek-aria` returns:
 | `:aria-valuenow` | The position in whole seconds |
 | `:aria-valuetext` | The position in words, from `value-text` |
 
-`value-text` writes the seconds with
-[Intl.DurationFormat](https://tc39.es/proposal-intl-duration-format/), in
-the locale you give, or else in the language of the page, from the
-`lang` of its `html` element, or else in the browser's, e.g. "12
-minutes, 30 seconds" or "12 minutter og 30 sekunder". It writes English
-where it can't, as on the JVM.
+The words come from `value-text`, which writes the seconds with
+[Intl.DurationFormat](https://tc39.es/proposal-intl-duration-format/),
+e.g. "12 minutes, 30 seconds" or "12 minutter og 30 sekunder". Its
+language is the locale you give, or else that of the page, from the
+`lang` of its `html` element, or else the browser's. Where there's no
+Intl.DurationFormat, as on the JVM, the words are English.
 
-`pointer-seek` returns the details of a seek to where a pointer event
-is on the seek bar that listens for it, e.g. `{:action :seekto
-:seek-time 1830}`, so that a click on the bar presses the same handler
-as the lock screen's scrubber. A point past either end of the bar seeks
-to that end, and it returns nil while the duration is unknown or
-infinite.
+For a pointer event on the seek bar that listens for it, `pointer-seek`
+returns the details of a seek to that point, e.g.
+`{:action :seekto :seek-time 1830}`. So a click on the bar can call the
+same handler as the lock screen's scrubber. A point past either end of
+the bar seeks to that end. While the duration is unknown or infinite,
+`pointer-seek` returns nil.
 
 
 ## Picture-in-Picture
@@ -599,13 +608,14 @@ What the promise of `enter!` resolves to:
 | `{:refused :disabled}` | The video has `disablePictureInPicture` |
 | `{:refused :no-video}` | The video has no video track, e.g. it plays an audio file |
 
-`exit!` resolves to `{:picture-in-picture false}`, and does nothing for a
-video that isn't in Picture-in-Picture.
+The promise of `exit!` resolves to `{:picture-in-picture false}`, also
+for a video that wasn't in Picture-in-Picture.
 
 ### State
 
-What `watch!` passes on, at each enter, resize of the window and leave,
-and `state` returns without the size:
+What `watch!` passes on as the video enters Picture-in-Picture, as the
+window resizes and as the video leaves, and what `state` returns,
+without the size:
 
 | Key | Value |
 |---|---|
@@ -663,8 +673,9 @@ Recommendation Draft of 30 April 2024, and WebKit's AirPlay events.
 
 ### State
 
-What `watch!` passes on, and `state` returns, with the availability as
-`:unknown` where the browser has Remote Playback:
+What `watch!` passes on and `state` returns. Only `watch!` learns
+whether a device is available, so `state` answers `:unknown` where the
+browser has Remote Playback:
 
 | Key | Value |
 |---|---|
@@ -684,19 +695,21 @@ What the promise of `prompt!` resolves to:
 | `{:refused :disabled}` | The element has `disableremoteplayback` | InvalidStateError |
 | `{:refused :not-supported}` | The browser has no Remote Playback, e.g. Firefox | NotSupportedError |
 
-`disable!` sets `disableremoteplayback` and removes `x-webkit-airplay`,
-whose value "allow" lets a video on an iPhone use AirPlay all the same.
+To keep an element off remote devices, `disable!` sets
+`disableremoteplayback`. It also removes `x-webkit-airplay`, since its
+value "allow" lets a video on an iPhone use AirPlay all the same.
 
 
 ## The screen kept on
 
 The `display.wake-lock` namespace follows the
-[Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/).
-`hold-while-playing!` requests a lock of the screen while the element
-plays and its page is visible, lets go of it at a pause, and requests it
-again at each `visibilitychange` that shows the page, since the browser
-lets go of every lock while the page is hidden. A lock that the browser
-refuses, e.g. on a low battery, is let go of without a word.
+[Screen Wake Lock API](https://www.w3.org/TR/screen-wake-lock/). While
+the element plays and its page is visible, `hold-while-playing!` holds a
+lock of the screen, and it lets go of the lock at a pause. The browser
+lets go of every lock while the page is hidden, so the function requests
+the lock again at each `visibilitychange` that shows the page. Where the
+browser refuses the lock, e.g. on a low battery, the screen goes dark as
+it would have, without an error.
 
 | Option | Value |
 |---|---|
@@ -711,20 +724,20 @@ Working Draft of 4 September 2025, and
 [user activation](https://html.spec.whatwg.org/multipage/interaction.html#tracking-user-activation)
 in the HTML Living Standard.
 
-`policy` returns `:allowed`, `:allowed-muted` or `:disallowed` for a
-media element, an AudioContext, or the kind of either, `:mediaelement`
-or `:audiocontext`. It returns nil where the browser has no
-`getAutoplayPolicy`, i.e. outside Firefox.
+For a media element, an AudioContext, or the kind of either
+(`:mediaelement` or `:audiocontext`), `policy` returns `:allowed`,
+`:allowed-muted` or `:disallowed`. Outside Firefox, the browser has no
+`getAutoplayPolicy`, and `policy` returns nil.
 
-`on-activation!` calls its function at once where the page has
-transient activation, and otherwise at the first of
+Where the page has transient activation, `on-activation!` calls its
+function at once, and otherwise at the first of
 `autoplay/activation-events` that activates the page.
 
-`play-when-allowed!` plays a media element with `media/play!`, and
-where the browser refuses, once more at the next activation. It calls
-its function with each answer, and where it waits, with
-`{:refused :not-allowed :waiting true}` first. It tries only twice, so a
-browser that never lets the page play can't make it loop.
+To play a media element, `play-when-allowed!` calls `media/play!`. Where
+the browser refuses, it tries once more at the next activation. It calls
+its function with each answer, and with
+`{:refused :not-allowed :waiting true}` while it waits. Since it tries
+only twice, a browser that never lets the page play can't make it loop.
 
 | Option | Value |
 |---|---|
@@ -734,7 +747,7 @@ browser that never lets the page play can't make it loop.
 
 ## Autoplay in view
 
-The `play-in-view!` of `page.autoplay` follows the
+In `page.autoplay`, `play-in-view!` follows the
 [Intersection Observer](https://www.w3.org/TR/intersection-observer/)
 Working Draft.
 
@@ -752,21 +765,22 @@ What `play-in-view!` passes on:
 | `:threshold` | The share of the video that must show for it to play, 0.5 by default |
 | `:reduced-motion` | Whether to hold the video, by default as `reduced-motion?` says the user prefers |
 
-The video plays as `media/play!` with `:muted-fallback` plays it, and
-pauses out of view only while it's muted. A video that ends doesn't
-count as paused by the visitor.
+The video plays as with `media/play!` and `:muted-fallback`, and pauses
+out of view only while it's muted. A video that ends doesn't count as
+paused by the visitor.
 
 
 ## One player across tabs
 
 The `page.tabs` namespace follows the
-[Web Locks API](https://www.w3.org/TR/web-locks/). `attach!` requests
-the lock of the name you give, with `steal`, when the element plays, and
-pauses the element when the lock is taken from it. It lets go of the
-lock when the element pauses and at `pagehide`, and takes it again when
-the page comes back from the back/forward cache still playing. A window
-that fires no events, e.g. Node's global object, which has Web Locks
-from Node 24.5, leaves out `pagehide` and `pageshow`.
+[Web Locks API](https://www.w3.org/TR/web-locks/). When the element
+plays, `attach!` requests the lock of the name you give, with `steal`,
+and when another tab takes the lock, it pauses the element. It lets go
+of the lock when the element pauses and at `pagehide`, and takes it
+again when the page comes back from the back/forward cache still
+playing. In a window that fires no events, e.g. Node's global object,
+which has Web Locks from Node 24.5, it doesn't follow `pagehide` and
+`pageshow`.
 
 | Option | Value |
 |---|---|
@@ -779,8 +793,8 @@ The `page.embed` namespace follows the
 [Permissions Policy](https://www.w3.org/TR/permissions-policy-1/)
 Working Draft of 22 September 2026.
 
-`allow` builds an iframe's allow attribute from a map of each feature to
-who may use it in the frame:
+From a map of each feature to who may use it in the frame, `allow`
+builds the iframe's `allow` attribute:
 
 | Value | In the attribute | Who |
 |---|---|---|
@@ -844,8 +858,8 @@ screen's next button to `:nexttrack` and never to `:skipad`.
 | A position or rate that's NaN or infinite | TypeError | TypeError | TypeError |
 | A negative rate | Accepted | Accepted | Accepted |
 
-`position!` never passes on what throws, and clears the state where the
-browser refuses an infinite duration.
+Where the browser refuses an infinite duration, `position!` clears the
+state, and it never passes on anything else that throws.
 
 ### Media Capabilities
 
@@ -897,7 +911,7 @@ every rate within 1/16 and 16:
 | The active cues after a seek | Changed by seeked | Changed by seeked | Changed by seeked, but later just after the track has loaded |
 | Removing the track element | Removes the track | Removes the track | Removes the track |
 
-`add!` adds its cues once the track element has loaded.
+So `add!` adds its cues once the track element has loaded.
 
 ### Picture-in-Picture
 
@@ -973,9 +987,6 @@ a network with an AirPlay device:
 | `prompt()` with `disableremoteplayback` | InvalidStateError | – | InvalidStateError | InvalidStateError |
 | WebKit's AirPlay events | No | No | Yes | Yes |
 
-Nothing was cast, since that takes a click in a picker, and would have
-played on someone's device.
-
 ### Media fragments
 
 A file with `#t=0.5`, over HTTP or as a blob URL, tried on 15 October
@@ -1023,8 +1034,7 @@ Tried on 15 October 2026 with a page that plays a muted video, declares
 | The metadata and the declared playback state | Kept | Kept | Kept | Kept |
 
 Under Playwright, Chrome played the video again after the restore, with
-a play event. Wherever the video's state changes, it fires the event, so
-`attach!` keeps the lock screen in step without a pageshow handler.
+a play event.
 
 
 ## Browser support

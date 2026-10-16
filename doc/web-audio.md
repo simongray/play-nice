@@ -1,9 +1,11 @@
 # How to put a Web Audio player on the lock screen
 
-A player that plays through Web Audio has no media element for `attach!`
-to follow, so set the playback state and the position yourself, besides
-the metadata and the handlers. Each engine also needs something of its
-own before it shows such a player at all.
+A player that plays through
+[Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API),
+e.g. to play tracks without gaps, has no media element for `attach!` to
+follow. So besides the metadata and the handlers, you set the playback
+state and the position yourself. Each browser also needs something of
+its own before it shows such a player at all.
 
 ## Set the state at each change
 
@@ -36,11 +38,17 @@ shows:
   (session/position! nil))
 ```
 
-Call `playing!` when the player starts, and again after each seek and
-change of rate, `paused!` when it pauses, and `stopped!` when it stops.
+Call them at these moments:
+
+- `playing!` when the player starts, and again after each seek and
+  change of rate, since the lock screen moves the position on by itself
+  from the last position and rate it got
+- `paused!` when the player pauses
+- `stopped!` when it stops
+
 Set the metadata with `session/metadata!` as for any player. The browser
-can't play or seek the player itself, so give `session/actions!` handlers
-for at least `:play`, `:pause` and `:seekto` that do it.
+can't play or seek a Web Audio player itself, so give `session/actions!`
+handlers that do it, for at least `:play`, `:pause` and `:seekto`.
 
 ## In Safari
 
@@ -55,7 +63,7 @@ AudioContext starts:
     (set! (.-type audio-session) "playback")))
 ```
 
-Safari then ignores the playback state and the handlers. Its play and
+Safari then ignores the playback state and the handlers: its play and
 pause buttons resume and suspend the AudioContext themselves.
 
 ## In Chrome and Edge
@@ -70,6 +78,6 @@ suspend the AudioContext.
 Firefox doesn't show a Web Audio player yet. Mozilla plans to, in
 [bug 2067534](https://bugzilla.mozilla.org/show_bug.cgi?id=2067534).
 
-These differences are from
+These differences come from
 [w3c/mediasession#378](https://github.com/w3c/mediasession/issues/378),
-which Mozilla opened in September 2026 to align the browsers.
+an issue that Mozilla opened in September 2026 to align the browsers.

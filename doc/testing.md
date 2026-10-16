@@ -1,15 +1,18 @@
 # How to test a player without the browser's session
 
-Give every call the option `:session` with a stand-in for the browser's
-MediaSession, which records what the calls set. Your tests then show what
-your player puts on the lock screen, and run in Node too, except those of
-`metadata!`, which needs a browser's MediaMetadata.
+The browser's MediaSession doesn't let a test read back the handlers
+that a page set, and Node has no MediaSession at all. So give every call
+of `session` the option `:session`, with a stand-in for the browser's
+MediaSession that records what the calls set. Your tests can then check
+what your player puts on the lock screen, and they run in Node too. Only
+the tests of `metadata!` need a browser, since it builds the browser's
+MediaMetadata.
 
 ## A stand-in session
 
-The stand-in is a JavaScript object with the two methods and the playback
-state that play-nice uses. This one adds each call to an atom, and keeps
-the handlers so that a test can press a button:
+The stand-in is a JavaScript object with the two methods that play-nice
+calls, and a `playbackState` property. This one adds each call to an
+atom, and keeps the handlers so that a test can press a button:
 
 ```clojure
 (defn stand-in
@@ -49,7 +52,7 @@ with the details as a JavaScript object:
 
 To test how your player copes with a browser that refuses an action,
 make the stand-in throw a TypeError for it, as Firefox does for
-`"togglemicrophone"`. `actions!` then returns that action.
+`"togglemicrophone"`. Then `actions!` returns that action.
 
 ## Test what follows an element
 
@@ -66,23 +69,25 @@ events:
     (set! (.-duration el) 60)
     (set! (.-currentTime el) 10)
     (set! (.-playbackRate el) 1)
-    (set! (.-paused el) false)
+    (set! (.-paused el) true)
     (session/attach! el opts)
     (reset! calls [])
+    ;; the element starts to play, as a browser's would
+    (set! (.-paused el) false)
     (.dispatchEvent el (js/Event. "play"))
     (is (= [[:playback-state "playing"]
             [:position {"duration" 60 "playbackRate" 1 "position" 10}]]
            @calls))))
 ```
 
-To test the position in Safari's place, make `setPositionState` throw a
-TypeError for an empty map or an infinite duration, as WebKit does.
-`position!` then clears the state instead. play-nice's own browser tests
-do this, in `session_browser_test.cljs`.
+To test how your player copes with Safari, make `setPositionState` throw
+a TypeError for an empty map or an infinite duration, as WebKit does.
+Then `position!` clears the state instead.
 
-The functions of `media` take the same stand-in, with the attributes and
-methods they use, e.g. a `play` that returns a promise rejected with a
-NotAllowedError, as a browser's does before the user has clicked.
+The functions of `media` take a stand-in for the element too, with the
+attributes and methods they use, e.g. a `play` that returns a promise
+rejected with a NotAllowedError, as a browser's does before the user has
+clicked.
 
 ## Test what waits for a click
 
