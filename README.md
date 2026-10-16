@@ -22,8 +22,7 @@ and [the rules of autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/G
 - **Pure where it can be.** While it is a ClojureScript library, the pure parts are written in CLJC and can run on the JVM too.
 
 > This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
-> a library for making podcast software, where it puts the episode that
-> plays on the lock screen. Like podcast-clj, it was developed with
+> a library for making podcast software. Like podcast-clj, it was developed with
 > assistance from frontier LLMs. It was _especially_ beneficial when I was probing for subtle browser differences.
 
 Hard to find elsewhere
