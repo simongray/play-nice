@@ -31,7 +31,7 @@ Hard to find elsewhere
 
 A lot of what this library does you'd be hard pressed to find a unified API for elsewhere:
 
-- [A single player across the tabs of an app](#around-the-player), so that two tabs don't play at once.
+- [A single player across the tabs of an app](#tabs-and-the-screen), so that two tabs don't play at once.
 - [Chapters in every browser](#chapters-and-captions), as a hidden text track, since only Chromium currently accepts chapters as metadata.
 - [MP3 and AAC found playable](#choosing-a-file) even when the browser API says they can't be.
 - [Keyboard shortcuts that WCAG recommends](#your-own-controls), and a seek bar that a screen reader reads in the user's language.
@@ -44,24 +44,22 @@ A lot of what this library does you'd be hard pressed to find a unified API for 
 Getting started
 ---------------
 
-Add the latest release from
-[Clojars](https://clojars.org/dk.simongray/play-nice) to the `:deps` of
-your `deps.edn`:
+You need a build tool that compiles ClojureScript for the browser, e.g.
+[shadow-cljs](https://github.com/thheller/shadow-cljs). Add the latest
+release from [Clojars](https://clojars.org/dk.simongray/play-nice) to
+the `:deps` of your `deps.edn`:
 
 ```clojure
 dk.simongray/play-nice {:mvn/version "0.2.0"}
 ```
 
-For changes since the latest release, give a Git dependency with the SHA
-of the latest commit on `master` instead, and set `:deps true` in your
-`shadow-cljs.edn`, since
-[shadow-cljs](https://github.com/thheller/shadow-cljs) only reads Git
-dependencies from `deps.edn`. The docstrings of each release are on
-[cljdoc](https://cljdoc.org/d/dk.simongray/play-nice).
+With shadow-cljs, also set `:deps true` in your `shadow-cljs.edn`, so
+that it reads the dependencies of `deps.edn`.
 
-The [quickstart](doc/quickstart.md) puts a player on the lock screen in a
-new project, and [Build a player with your own controls](doc/own-controls.md)
-gives it a play button, a seek bar and keyboard shortcuts.
+The [quickstart](doc/quickstart.md) takes you through a new project that
+puts a track on the lock screen.
+[Build a player with your own controls](doc/own-controls.md) then adds a
+play button, a seek bar and keyboard shortcuts.
 
 
 A podcast example
@@ -74,19 +72,37 @@ and should show skip buttons on the phone's lock screen:
 (require '[dk.simongray.play-nice.media :as media]
          '[dk.simongray.play-nice.session :as session])
 
-(media/source! audio {:src "/272.mp3" :position 754 :playback-rate 1.5})
-(media/watch! audio #(swap! app assoc :player %))
+;; the page's <audio> element and play button
+(def audio
+  (js/document.querySelector "audio"))
 
+(def play-button
+  (js/document.querySelector "button"))
+
+;; start 12:34 into the episode, at 1.5 times the speed
+(media/source! audio {:src "/272.mp3" :position 754 :playback-rate 1.5})
+
+;; show the episode on the lock screen, with buttons that skip 15 seconds
+;; back and 30 forward
 (session/attach! audio {:actions {:seekbackward 15 :seekforward 30}})
 (session/metadata! {:title "Episode 272" :artist "My Podcast"})
 
-(-> (media/play! audio {:muted-fallback true})
-    (.then prn))
-;; prints {:playing true}, or {:playing true :muted true} where the
-;; browser lets the page play only muted
+(defn play-episode!
+  "Play the episode, and print the browser's answer."
+  [_]
+  (-> (media/play! audio)
+      (.then prn)))
+
+(.addEventListener play-button "click" play-episode!)
+;; prints {:playing true} at the click
 ```
 
-**NOTE:** the library works well on its own, but it was also designed to be paired with [with podcast-clj](#with-podcast-clj).
+Besides the file, `source!` sets the position and the rate in the order
+that the browser needs, since a new file resets the rate. A browser
+usually lets a page play sound only after a click, a tap or a key press
+on it, so the example calls `play!` in the button's click handler.
+
+> **NOTE:** the library works well on its own as seen above, but it was also designed to be paired with [podcast-clj](#with-podcast-clj).
 
 
 How the API works
@@ -96,20 +112,26 @@ A function takes the element first, and a map of options last (which you can lea
 A function name that ends in `!` changes the page or returns a promise.
 Other functions are pure.
 
-The keys of a map are the spec's names in kebab-case, e.g.
-`:current-time` for `currentTime`, and the values of the spec's enums are
-keywords, e.g. `:seekto`. Where the browser refuses something, the answer
-says why with a keyword, e.g. `{:refused :not-allowed}`. Where it lacks a
-feature, the functions do nothing.
+The keys of the maps are the browser's own names in kebab-case, e.g.
+`:current-time` for the element's `currentTime`. The browser's enum
+strings are keywords, e.g. `:seekto` for `"seekto"`.
 
-The namespaces, under `dk.simongray.play-nice`, come in families:
+A browser that refuses something throws an exception or rejects a
+promise. The functions return a map instead, which names the reason with
+a keyword, e.g. `{:refused :not-allowed}`. Where a browser lacks a
+feature, its functions do nothing or answer `{:refused :not-supported}`,
+so you can call them in any browser.
 
-- `media` for the element itself, and its tracks, captions, capabilities
-  and fragments
-- `display` for where it shows: Picture-in-Picture, fullscreen, casting
-  and the wake lock
-- `page` for the page around it: autoplay, tabs and embeds
-- `session`, `controls` and `schema` on their own
+The namespaces are under `dk.simongray.play-nice`:
+
+- `media` for the media element, and the namespaces under it for its
+  chapters, captions, files and links
+- `session` for the lock screen
+- `controls` for keyboard shortcuts and a seek bar of your own
+- `display` namespaces for Picture-in-Picture, fullscreen, casting and
+  keeping the screen on
+- `page` namespaces for autoplay, tabs and embeds
+- `schema` for Malli schemas of the maps
 
 The [reference](doc/reference.md#namespaces) lists each of them, and
 those that also run on the JVM.
@@ -118,118 +140,174 @@ those that also run on the JVM.
 The media element
 -----------------
 
-The `media` namespace plays the element, seeks, and sets its rate and
-volume. To start an episode, `source!` loads the file with the position
-and the rate, in the order that the browser needs. A browser usually
-lets a page play sound only after a click, a tap or a key press, as
-[MDN's guide to autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)
-explains, so call `play!` in the handler of the click itself.
+A media element is an `<audio>` or `<video>` element. The `media`
+namespace has the functions that play, pause and seek it, and set its
+rate and volume.
 
-To keep the element's state in your app's, give `watch!` a function.
-Follow `:timeupdate` too, which fires several times a second while the
-element plays, for a seek bar that moves:
+The browser keeps the element's state in many properties, e.g. `paused`
+and `currentTime`, and fires an event when one of them changes. With
+`watch!`, your function gets the state as a map, now and at each change.
+You can then keep it with the rest of your app's state, e.g. in an atom
+that your views render:
 
 ```clojure
+;; the state of your app
+(defonce app
+  (atom {}))
+
 (media/watch! audio #(swap! app assoc :player %)
               {:events (conj media/events :timeupdate)})
-;; :player is e.g. {:status :buffering :paused false :current-time 754.2 …}
+;; :player is then e.g. {:status :ready :paused false :current-time 754.2 …}
 ```
 
-Where your effects are data, as in re-frame, `apply!` does what effects
-such as `[:seek 754]` and `[:play]` name, as
-[the app state guide](doc/app-state.md#with-re-frame) shows. A volume
-slider sounds even along its length on the `:cubic` curve, and
-`volume-locked!` tells where an iPhone ignores the volume a page sets.
-The [reference](doc/reference.md#the-media-element) has the state, the
-effects and every answer.
+By default, `watch!` leaves out the `timeupdate` event, which fires
+several times a second while the element plays. Add it, as here, when a
+view shows the position, e.g. on a seek bar.
+
+> **NOTE:** an iPhone ignores the volume that a page sets, since it plays every
+element at the system's volume. With `volume-locked!`, you can find that
+out and hide your volume slider.
 
 
 The lock screen
 ---------------
 
-The `session` namespace puts what plays on the lock screen and in the
-browser's media controls, and lets the headphone buttons control it,
-through the
-[Media Session](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API).
-In the example at the top, `attach!` keeps the session in step with the
-element and sets buttons that play, pause and skip it, and `metadata!`
-shows the title, artist and artwork.
+Phones show the media that plays on their lock screen, and desktops show
+it in their media controls. The browser's
+[Media Session API](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)
+lets a page set what they show and handle presses of their buttons,
+including those of headphones. The `session` namespace wraps it.
 
-For buttons of your own, e.g. the next episode, merge your handlers over
-those of `element-actions` and give them to `actions!`, which returns the
-buttons that the browser refused. Keep `:seekto` among them, since
-[Safari drops its own buttons](doc/browsers.md#safaris-own-buttons) once
-a page sets one. How-to guides show
-[a player on Web Audio](doc/web-audio.md), and
-[tests without the browser's session](doc/testing.md).
+In the [podcast example](#a-podcast-example), the `:actions` of
+`attach!` give the buttons the handlers of `element-actions`, which
+play, pause and seek the element. For a button of your own, e.g. one
+that plays the next episode, merge your handler over those, and pass
+them all to `actions!`:
+
+```clojure
+(def handlers
+  (assoc (session/element-actions audio {:seekbackward 15 :seekforward 30})
+         ;; your own code loads the episode when :episode changes
+         :nexttrack (fn [_] (swap! app update :episode inc))))
+
+;; without :actions, since actions! sets the buttons
+(session/attach! audio)
+(session/actions! handlers)
+;; => #{}, the buttons that the browser refused
+```
+
+> **NOTE**: merge your own handlers over those of `element-actions`, rather than
+set them alone:
+[Safari drops its own buttons](doc/browsers.md#safaris-own-buttons) as
+soon as a page sets one, so a lone `:nexttrack` would leave its lock
+screen without a scrubber or skip buttons.
 
 
 Your own controls
 -----------------
 
-For a player with controls of your own, the `controls` namespace lets
-the keyboard press the same handlers as the lock screen. The keys work
-only while the focus is in the player, as
-[WCAG asks of shortcuts of one key](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts),
-so you give `listen!` the element that holds the player. A seek bar of
-your own takes its
-[ARIA attributes](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
-from `seek-aria`, so that a screen reader reads the position in words in
-the page's language, and `pointer-seek` turns a click or a drag on it
-into the seek that the lock screen's scrubber asks for:
+Most apps have their own play button and seek bar rather than the
+browser's. The keyboard and screen readers are then yours to handle,
+and the `controls` namespace helps with both.
+
+With `listen!`, the keyboard calls the same handlers as the lock
+screen's buttons, e.g. space or k to play and pause, and j or l to skip,
+as on YouTube. The keys work only while the focus is inside the element
+that you give `listen!`, e.g. the one that holds the player.
+[WCAG asks that of shortcuts of a single key](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts),
+so that they don't fire by accident, e.g. while someone dictates to the
+page:
 
 ```clojure
 (require '[dk.simongray.play-nice.controls :as controls])
 
-;; what the buttons of the lock screen do to the audio element
-(def handlers
-  (session/element-actions audio {:seekbackward 15 :seekforward 30}))
+;; the element that holds the player's controls, and the seek bar in it
+(def player
+  (js/document.getElementById "player"))
 
-;; in the element that holds the player, space and k play and pause,
-;; and j, l and the arrow keys skip
+(def seek-bar
+  (js/document.getElementById "seek-bar"))
+
+;; the handlers of the lock screen above
 (controls/listen! player audio handlers)
 
-;; in the seek bar, the arrow keys move a second, Page Up and Page Down
-;; 15 seconds, and Home and End to the start and the end
+;; on the seek bar, the arrow keys move a second instead of skipping
 (controls/listen! seek-bar audio handlers {:keymap controls/seek-bar-keys})
-
-;; the seek bar in Hiccup, from the element's state that watch! keeps
-[:div#seek-bar (merge {:aria-label "Position" :tabindex 0}
-                      (controls/seek-aria (:player @app)))]
-;; with e.g. {:role "slider" :aria-valuenow 754
-;;            :aria-valuetext "12 minutes, 34 seconds" …}
 ```
+
+A screen reader also needs to know that your seek bar is a slider, and
+which position it shows. For that, `seek-aria` returns the seek bar's
+[ARIA attributes](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
+from the element's state, with the position in words in the page's
+language:
+
+```clojure
+(controls/seek-aria (:player @app))
+;; => e.g. {:role "slider" :aria-valuemin 0 :aria-valuemax 3600
+;;          :aria-valuenow 754 :aria-valuetext "12 minutes, 34 seconds"}
+```
+
+Without the words, a screen reader would read the position as a bare
+754. [Build a player with your own controls](doc/own-controls.md) shows
+the whole player.
 
 
 Chapters and captions
 ---------------------
 
-Only Chromium takes the chapters of the Media Session's metadata, but
-every browser follows a
+Many podcast episodes have chapters, i.e. the titles and start times of
+their parts. To show the current chapter, you could put the chapters in
+the Media Session's metadata, but only Chromium accepts them there.
+Every browser handles a
 [text track](https://developer.mozilla.org/en-US/docs/Web/API/WebVTT_API)
-of chapters, without showing it, and `tracks/watch!` says which chapter
-plays. For a video, `tracks/show!` shows the
-captions that best fit the languages you prefer. A page can't read the
-system's caption settings, so `captions/style!` turns the user's own
-style into [CSS for the captions](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::cue),
-in the vocabulary of
-[the FCC's rule for caption displays](https://www.ecfr.gov/current/title-47/chapter-I/subchapter-C/part-79/subpart-B/section-79.103):
+of chapters, though, and marks the active chapter without showing the
+track. So `tracks/add!` adds such a track to the element. Then
+`tracks/watch!` calls your function with the element's tracks whenever
+they change, e.g. at the start of a chapter:
 
 ```clojure
-(require '[dk.simongray.play-nice.media.captions :as captions]
-         '[dk.simongray.play-nice.media.tracks :as tracks])
+(require '[dk.simongray.play-nice.media.tracks :as tracks])
 
-;; the chapters of an episode as a hidden track, whose active cue is the
-;; chapter that plays; without a duration, the last lasts to the end
+;; the chapters of a 30-minute episode, each until the next one starts
 (tracks/add! audio {:kind :chapters
                     :cues (tracks/chapter-cues [{:title "Intro" :start-time 0}
                                                 {:title "News" :start-time 95}]
-                                               nil)})
+                                               1800)})
 
-;; a video's captions or subtitles in Danish, or else in English
+(tracks/watch! audio #(swap! app assoc :tracks %))
+;; at 2:00, :tracks is e.g.
+;; [{:kind :chapters :mode :hidden …
+;;   :active-cues [{:start-time 95 :end-time 1800 :text "News"}]}]
+```
+
+A video often comes with captions or subtitles in several languages, as
+`<track>` elements. To show the track that suits the viewer best, give
+`tracks/show!` the kinds and the languages that they accept, in the
+order that they prefer them:
+
+```clojure
+;; the page's <video>, with <track> elements for its captions and subtitles
+(def video
+  (js/document.querySelector "video"))
+
+;; Danish captions or subtitles, or else English ones
 (tracks/show! video {:kinds [:captions :subtitles] :languages ["da" "en"]})
+```
 
-;; its captions in the user's style: larger, yellow, with a drop shadow
+Phones and computers let users choose the size and colours of captions,
+e.g. larger letters, but a page can't read those settings. So you have
+to offer settings of your own, and `captions/style!` turns the user's
+choices into
+[CSS for the video's captions](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/::cue).
+The keys of the style are those of
+[the FCC's rule for caption displays](https://www.ecfr.gov/current/title-47/chapter-I/subchapter-C/part-79/subpart-B/section-79.103),
+which lists the caption settings that a video device in the US must
+offer:
+
+```clojure
+(require '[dk.simongray.play-nice.media.captions :as captions])
+
+;; captions at 150%, in yellow, with a drop shadow
 (captions/style! video {:font-scale 1.5 :color :yellow :edge :drop-shadow})
 ```
 
@@ -237,88 +315,141 @@ in the vocabulary of
 Picture-in-Picture, fullscreen and casting
 ------------------------------------------
 
-For a video, `picture-in-picture/enter!` shows it in a floating window,
-as [Picture-in-Picture](https://developer.mozilla.org/en-US/docs/Web/API/Picture-in-Picture_API)
-has it. To cast, `remote-playback/prompt!` shows the browser's picker of
-devices, e.g. a [Chromecast](https://developers.google.com/cast) or an
-[AirPlay](https://www.apple.com/airplay/) receiver, through
-[Remote Playback](https://developer.mozilla.org/en-US/docs/Web/API/Remote_Playback_API).
-Call them in a click handler, since the browser refuses them without a
-click. Each answers with data, and has a `watch!` that follows its
-state.
+Besides playing in the page, a video can play in a floating window above
+other apps, fullscreen, or on a TV:
 
-On an iPhone, only a video element itself can go
-[fullscreen](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API),
-in the system's own player, so `fullscreen/enter!` falls back to it
-there:
+- [Picture-in-Picture](https://developer.mozilla.org/en-US/docs/Web/API/Picture-in-Picture_API)
+  with `picture-in-picture/enter!`
+- [fullscreen](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API)
+  with `fullscreen/enter!`
+- [casting](https://developer.mozilla.org/en-US/docs/Web/API/Remote_Playback_API)
+  with `remote-playback/prompt!`, which shows the browser's list of
+  devices, e.g. a [Chromecast](https://developers.google.com/cast) or an
+  [AirPlay](https://www.apple.com/airplay/) receiver
+
+Browsers allow each of them only in the handler of a click. Each
+namespace also has a `watch!` that follows the state, e.g. to notice
+when the user closes the floating window.
+
+On an iPhone, a page can't put an element fullscreen, only a video,
+which then plays in the system's own player. So `fullscreen/enter!`
+falls back to the video there. Your own controls don't show in the
+system's player, so the answer says which of the two went fullscreen:
 
 ```clojure
 (require '[dk.simongray.play-nice.display.fullscreen :as fullscreen])
 
+;; in a click handler, where player holds the video and your controls
 (-> (fullscreen/enter! player {:video video})
     (.then prn))
-;; prints {:fullscreen :element} on a desktop, {:fullscreen :video} on an
-;; iPhone, or e.g. {:refused :not-allowed} without a click
+;; prints {:fullscreen :element} on a desktop, where your controls show,
+;; or {:fullscreen :video} on an iPhone, where they don't
 ```
 
 
-Around the player
------------------
+Autoplay
+--------
 
-Before the user's first click, a browser usually plays a page's media
-only muted, if at all. `autoplay/play-when-allowed!` plays an element
-muted where the browser refuses only its sound, and otherwise once more
-at the user's next click, tap or key press, and
-`autoplay/on-activation!` calls any function then. For a muted video at the top of a page,
-`autoplay/play-in-view!` plays it while it's in view and pauses it when
-it scrolls away, in every browser, and holds it where the user
-[prefers reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).
+Each browser has its own rules for autoplay, which
+[MDN's guide to autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)
+explains. To start as soon as the browser allows, call
+`autoplay/play-when-allowed!`. It plays the element at once where the
+browser allows it, and muted where the browser refuses only the sound.
+Otherwise it plays the element at the user's next click, tap or key
+press anywhere on the page. That suits e.g. a video that should start
+when the page opens.
 
-On a desktop, no browser stops one tab's audio when another starts, so
-`tabs/attach!` holds a
-[Web Lock](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API)
-named for your app while the element plays, and pauses the element when
-another tab takes the lock. No browser keeps the screen on for audio
-either, so `wake-lock/hold-while-playing!` holds a
-[Screen Wake Lock](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
-while it plays, e.g. for a transcript.
+For a muted video at the top of a page, `autoplay/play-in-view!` plays
+it while it's in view and pauses it when it scrolls away. It doesn't
+start the video at all where the user
+[prefers reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion),
+a system setting for people who are bothered by movement on screen.
+
+
+Tabs and the screen
+-------------------
+
+On a desktop, a listener can open your app in two tabs and start an
+episode in each. No browser stops one tab's audio when another tab
+starts, so both play at once and each overwrites the position that the
+other saved. With `tabs/attach!`, only one tab plays at a time, through
+a [Web Lock](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API)
+named for your app:
+
+```clojure
+(require '[dk.simongray.play-nice.page.tabs :as tabs])
+
+(tabs/attach! audio "my-podcast-app")
+```
+
+A playing video keeps the screen on, but audio doesn't, so a phone's
+screen goes dark while an episode plays, even when the page shows its
+transcript. With `wake-lock/hold-while-playing!`, the screen stays on
+while the element plays, through a
+[Screen Wake Lock](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
 
 
 Choosing a file
 ---------------
 
-A podcast episode often comes in several files, e.g. Opus and AAC. To choose
-one, describe each as a configuration of
+A podcast episode often comes in several files, e.g. Opus and AAC. To
+choose one that the browser can play, describe each as a configuration of
 [Media Capabilities](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capabilities_API),
-e.g. `{:type :file :audio {:content-type "audio/mp4"}}`, give them to
-`capabilities/decoding-infos!`, and keep those that `playable?` accepts.
-Media Capabilities alone refuses some of the commonest files, e.g. MP3
-in Firefox, so the answer also has what
+the browser's API for whether it can play a format, and how well. On its
+own, _Media Capabilities_ at times refuses some very common files. Firefox and
+Safari refuse MP3, and every browser refuses AAC when its type names no
+codecs, as most podcast feeds give it. So
+`capabilities/decoding-info!` asks the older
 [canPlayType](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType)
-says, as [the browsers' differences](doc/browsers.md#two-answers-about-what-plays)
-explains.
+too, and `playable?` accepts the file where either says it plays:
+
+```clojure
+(require '[dk.simongray.play-nice.media.capabilities :as capabilities])
+
+;; AAC, with the type that most podcast feeds give it
+(-> (capabilities/decoding-info! {:type  :file
+                                  :audio {:content-type "audio/mp4"}})
+    (.then prn))
+;; prints {:supported false :smooth false :power-efficient false
+;;         :can-play-type :maybe}
+```
 
 
 Links, embeds and schemas
 -------------------------
 
-For a file's URL, `fragment/time` reads the time of its
-[media fragment](https://www.w3.org/TR/media-frags/), e.g. `#t=73,133`,
-and for a page's link, `fragment/link-time` reads its `t`, e.g.
-`?t=1m13s`. With `session/clip-position`, the lock screen then shows
-such a soundbite rather than the whole episode.
+A link can point at a moment of an episode, e.g. to share a soundbite.
+A link to the file does that with a
+[media fragment](https://www.w3.org/TR/media-frags/) at the end of its
+URL, e.g. `#t=73,133` for the minute from 1:13, and the browser starts
+the file there. A link to a page does it with a `t` parameter, e.g.
+`?t=1m13s`, as YouTube's links do. To read the times, use
+`fragment/time` and `fragment/link-time`:
 
-A page that embeds a player from another site in an
-[iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe)
-has to [allow](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Permissions_Policy)
-what it may do, and `embed/allow` writes the attribute, e.g.
-`"fullscreen; picture-in-picture"` for `{:fullscreen true
-:picture-in-picture true}`.
+```clojure
+(require '[dk.simongray.play-nice.media.fragment :as fragment])
 
-The `schema` namespace has the shapes of the maps as
-[Malli](https://github.com/metosin/malli) schemas, written as plain data,
-so the library doesn't depend on Malli. Check a map with Malli of your
-own, e.g. in a test: `(m/validate schema/media-effect [:seek 754])`.
+(fragment/time "https://cdn.example/272.mp3#t=73,133")
+;; => {:start 73 :end 133}
+
+(fragment/link-time "https://example.com/episodes/272?t=1m13s")
+;; => 73
+```
+
+Other sites may embed your player in an
+[iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe).
+In its `allow` attribute, the iframe has to
+[permit](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Permissions_Policy)
+the features that the player uses, or e.g. fullscreen won't work in it.
+To build the attribute from a map, use `embed/allow`, e.g.
+`(embed/allow {:fullscreen true :picture-in-picture true})` returns
+`"fullscreen; picture-in-picture"`.
+
+The `schema` namespace describes the maps of the library as
+[Malli](https://github.com/metosin/malli) schemas. They're plain data,
+so play-nice doesn't depend on Malli. With Malli in your own app, you
+can check a map, e.g. in a test:
+`(m/validate schema/media-effect [:seek 754])`.
 
 
 With podcast-clj
@@ -333,6 +464,7 @@ e.g. the data `library/playback` returns for an episode can go straight into pla
 ```clojure
 (require '[dk.simongray.podcast.app.library :as library])
 
+;; lib is an atom of podcast-clj's library, and id the id of an episode
 (let [{:keys [metadata] :as playback-state} (library/playback @lib id)]
   (media/source! audio playback-state)
   (session/metadata! metadata))
@@ -340,7 +472,7 @@ e.g. the data `library/playback` returns for an episode can go straight into pla
 
 The `resolve/decoding-configuration` function in [podcast-clj](https://github.com/simongray/podcast-clj)
 describes a file of a feed for `capabilities/decoding-info!`,
-and its `links/at-time` writes the links to a moment that `fragment/time` reads.
+and its `links/at-time` makes the links to a moment that `fragment/time` parses.
 Its guide to [playing episodes](https://github.com/simongray/podcast-clj/blob/master/doc/building-an-app.md#play-episodes)
 puts the two together.
 
@@ -363,12 +495,15 @@ Documentation
 Browsers
 --------
 
-The library is for Chrome, Edge, Firefox and Safari. Its tests run in
-Chrome, Firefox and WebKit, and in Safari on an iPhone simulator, and
-Edge has Chrome's engine. The Android WebView has no Media Session, so
-an app in Capacitor or Cordova on Android needs a native plugin for its
-lock screen. The [reference](doc/reference.md#browser-support) lists
-what each browser supports, and what each engine refuses.
+The library supports Chrome, Edge, Firefox and Safari. Its tests run in
+Chrome, Firefox and WebKit, and in Safari on an iPhone simulator. Edge
+runs on Chrome's engine, so the tests in Chrome cover it too.
+
+The Android WebView has no Media Session, so an Android app that shows
+your page in a WebView, e.g. through Capacitor or Cordova, needs a
+native plugin for its lock screen. The
+[reference](doc/reference.md#browser-support) lists what each browser
+supports, and what each engine refuses.
 
 
 Development
