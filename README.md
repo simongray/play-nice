@@ -40,30 +40,6 @@ A lot of what this library does you'd be hard pressed to find a unified API for 
 - [The iPhone's locked volume](#the-media-element), which is otherwise tricky to find out.
 - [Lock screen buttons that work in Safari](#the-lock-screen), which drops its own buttons once a page sets one.
 
-An example
-----------
-
-A podcast episode starts where the listener left off, at their rate, and
-shows on the lock screen with buttons that skip:
-
-```clojure
-(require '[dk.simongray.play-nice.media :as media]
-         '[dk.simongray.play-nice.session :as session])
-
-(media/source! audio {:src "/272.mp3" :position 754 :playback-rate 1.5})
-(media/watch! audio #(swap! app assoc :player %))
-
-(session/attach! audio {:actions {:seekbackward 15 :seekforward 30}})
-(session/metadata! {:title "Episode 272" :artist "My Podcast"})
-
-(-> (media/play! audio {:muted-fallback true})
-    (.then prn))
-;; prints {:playing true}, or {:playing true :muted true} where the
-;; browser lets the page play only muted
-```
-
-The library works on its own, and [with podcast-clj](#with-podcast-clj).
-
 
 Getting started
 ---------------
@@ -88,12 +64,37 @@ new project, and [Build a player with your own controls](doc/own-controls.md)
 gives it a play button, a seek bar and keyboard shortcuts.
 
 
+A podcast example
+-----------------
+
+A podcast episode should start where the listener left off, at their chosen playback rate,
+and should show skip buttons on the phone's lock screen:
+
+```clojure
+(require '[dk.simongray.play-nice.media :as media]
+         '[dk.simongray.play-nice.session :as session])
+
+(media/source! audio {:src "/272.mp3" :position 754 :playback-rate 1.5})
+(media/watch! audio #(swap! app assoc :player %))
+
+(session/attach! audio {:actions {:seekbackward 15 :seekforward 30}})
+(session/metadata! {:title "Episode 272" :artist "My Podcast"})
+
+(-> (media/play! audio {:muted-fallback true})
+    (.then prn))
+;; prints {:playing true}, or {:playing true :muted true} where the
+;; browser lets the page play only muted
+```
+
+**NOTE:** the library works well on its own, but it was also designed to be paired with [with podcast-clj](#with-podcast-clj).
+
+
 How the API works
 -----------------
 
-A function takes the element first, and a map of options last, which
-you can leave out. A name that ends in `!` changes the page or returns a
-promise, and the others only read or compute.
+A function takes the element first, and a map of options last (which you can leave out).
+A function name that ends in `!` changes the page or returns a promise.
+Other functions are pure.
 
 The keys of a map are the spec's names in kebab-case, e.g.
 `:current-time` for `currentTime`, and the values of the spec's enums are
@@ -320,38 +321,14 @@ so the library doesn't depend on Malli. Check a map with Malli of your
 own, e.g. in a test: `(m/validate schema/media-effect [:seek 754])`.
 
 
-Hard to find elsewhere
-----------------------
-
-Some of what the library does, you'd otherwise find only inside a large
-player, or not at all:
-
-- [Lock screen buttons that work in Safari](#the-lock-screen), which
-  drops its own buttons once a page sets one.
-- [Chapters in every browser](#chapters-and-captions), as a hidden text
-  track, since only Chromium takes them as metadata.
-- [Fullscreen on an iPhone](#picture-in-picture-fullscreen-and-casting),
-  in the system's video player where nothing else may go fullscreen.
-- [The iPhone's locked volume](#the-media-element), which a page can't
-  read, found out from the `volumechange` event that never comes.
-- [One player across the tabs of an app](#around-the-player), so that
-  two tabs don't play at once.
-- [MP3 and AAC found playable](#choosing-a-file) where Media
-  Capabilities says they aren't.
-- [Keyboard shortcuts that WCAG allows](#your-own-controls), and a seek
-  bar that a screen reader reads in the user's language.
-- [Caption styles](#chapters-and-captions) in the vocabulary of the
-  FCC's rule for caption displays.
-
-
 With podcast-clj
 ----------------
 
-A podcast app in the browser needs both libraries:
-[podcast-clj](https://github.com/simongray/podcast-clj) for the feeds and
-the listener's queue and progress, and play-nice for the playing.
-Neither depends on the other, but they share their data. What
-`library/playback` returns for an episode goes straight to play-nice:
+A podcast app in the browser ideally uses the
+[podcast-clj](https://github.com/simongray/podcast-clj) library for the feeds and
+the listener's queue and progress (and play-nice for the playback).
+Neither library depends on the other, but they do share the design of their data,
+e.g. the data `library/playback` returns for an episode can go straight into play-nice:
 
 ```clojure
 (require '[dk.simongray.podcast.app.library :as library])
@@ -361,10 +338,10 @@ Neither depends on the other, but they share their data. What
   (session/metadata! metadata))
 ```
 
-Its `resolve/decoding-configuration` describes a file of a feed for
-`capabilities/decoding-info!`, and its `links/at-time` writes the links
-to a moment that `fragment/time` reads. Its guide to
-[playing episodes](https://github.com/simongray/podcast-clj/blob/master/doc/building-an-app.md#play-episodes)
+The `resolve/decoding-configuration` function in [podcast-clj](https://github.com/simongray/podcast-clj)
+describes a file of a feed for `capabilities/decoding-info!`,
+and its `links/at-time` writes the links to a moment that `fragment/time` reads.
+Its guide to [playing episodes](https://github.com/simongray/podcast-clj/blob/master/doc/building-an-app.md#play-episodes)
 puts the two together.
 
 
