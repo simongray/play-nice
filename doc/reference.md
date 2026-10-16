@@ -764,7 +764,9 @@ The `page.tabs` namespace follows the
 the lock of the name you give, with `steal`, when the element plays, and
 pauses the element when the lock is taken from it. It lets go of the
 lock when the element pauses and at `pagehide`, and takes it again when
-the page comes back from the back/forward cache still playing.
+the page comes back from the back/forward cache still playing. A window
+that fires no events, e.g. Node's global object, which has Web Locks
+from Node 24.5, leaves out `pagehide` and `pageshow`.
 
 | Option | Value |
 |---|---|

@@ -24,7 +24,9 @@
   The element takes the lock from any holder when it plays, and lets it
   go when it pauses and at pagehide, since a held lock keeps a page out of
   the back/forward cache. Where the browser has no Web Locks, the call
-  does nothing."
+  does nothing. Where the window fires no events, e.g. Node's global
+  object, which has Web Locks from Node 24.5, the element still takes the
+  lock as it plays and lets go of it as it pauses."
   ([element name]
    (attach! element name {}))
   ([^js element name opts]
@@ -62,17 +64,20 @@
                            (release nil))))
              shown!  (fn [^js e]
                        (when (and (.-persisted e) (not (.-paused element)))
-                         (hold! nil)))]
+                         (hold! nil)))
+             paged?  (fn? (.-addEventListener window))]
          (.addEventListener element "play" hold!)
          (.addEventListener element "pause" let-go!)
-         (.addEventListener window "pagehide" let-go!)
-         (.addEventListener window "pageshow" shown!)
+         (when paged?
+           (.addEventListener window "pagehide" let-go!)
+           (.addEventListener window "pageshow" shown!))
          (when-not (.-paused element)
            (hold! nil))
          (fn []
            (.removeEventListener element "play" hold!)
            (.removeEventListener element "pause" let-go!)
-           (.removeEventListener window "pagehide" let-go!)
-           (.removeEventListener window "pageshow" shown!)
+           (when paged?
+             (.removeEventListener window "pagehide" let-go!)
+             (.removeEventListener window "pageshow" shown!))
            (let-go! nil)
            nil))))))
