@@ -3,11 +3,10 @@ play-nice
 
 [![Clojars Project](https://img.shields.io/clojars/v/dk.simongray/play-nice.svg)](https://clojars.org/dk.simongray/play-nice)
 
-This is a ClojureScript library for audio and video in the browser. It
+This is a ClojureScript library that makes audio and video _play nice_ in the browser. It
 gives you one idiomatic Clojure API for the
 [media element](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement)
-and for the browser features that fit a player into the rest of the
-system:
+and for the other browser features that deal with media:
 [the lock screen and the headphone buttons](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API),
 [Picture-in-Picture](https://developer.mozilla.org/en-US/docs/Web/API/Picture-in-Picture_API),
 [fullscreen](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API),
@@ -16,25 +15,30 @@ system:
 [the keyboard](https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Keyboard-navigable_JavaScript_widgets)
 and [the rules of autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay).
 
+- **Browser differences.** Chrome, Firefox, and Safari (especially on iPhone) all handle media slightly differently,
+  so play-nice unifies the API and irons out the differences in behaviour.
+- **Data-driven.** It is an idiomatic Clojure layer on top of the stateful browser API.
+  State is represented as maps, browser jargon as keywords, and changes are pure data too.
+- **Pure where it can be.** While it is a ClojureScript library, the pure parts are written in CLJC and can run on the JVM too.
+
 > This library was spun out of [podcast-clj](https://github.com/simongray/podcast-clj),
 > a library for making podcast software, where it puts the episode that
 > plays on the lock screen. Like podcast-clj, it was developed with
-> assistance from frontier LLMs.
+> assistance from frontier LLMs. It was _especially_ beneficial when I was probing for subtle browser differences.
 
-- **Data in, data out.** States are maps, the browser's names are
-  keywords, and changes can be data too, e.g. effects in
-  [re-frame](https://day8.github.io/re-frame/).
-- **One shape everywhere.** Each part tells you its state the same way,
-  and answers with data where the browser would throw.
-- **The browsers' differences handled once.** Chrome, Firefox and Safari
-  each refuse and throw in their own ways, the iPhone most of all, and
-  the tests run in all of them.
-- **Pure where it can be.** What needs no browser runs on the JVM too,
-  and the rest can be tested with stand-ins.
+Hard to find elsewhere
+----------------------
 
-Some of what it does is [hard to find elsewhere](#hard-to-find-elsewhere),
-e.g. chapters in every browser, and fullscreen on an iPhone.
+A lot of what this library does you'd be hard pressed to find a unified API for elsewhere:
 
+- [A single player across the tabs of an app](#around-the-player), so that two tabs don't play at once.
+- [Chapters in every browser](#chapters-and-captions), as a hidden text track, since only Chromium currently accepts chapters as metadata.
+- [MP3 and AAC found playable](#choosing-a-file) even when the browser API says they can't be.
+- [Keyboard shortcuts that WCAG recommends](#your-own-controls), and a seek bar that a screen reader reads in the user's language.
+- [Caption styles](#chapters-and-captions) in the vocabulary of the FCC's rule for caption displays.
+- [Fullscreen on an iPhone](#picture-in-picture-fullscreen-and-casting), using the system's video player as nothing else may go fullscreen.
+- [The iPhone's locked volume](#the-media-element), which is otherwise tricky to find out.
+- [Lock screen buttons that work in Safari](#the-lock-screen), which drops its own buttons once a page sets one.
 
 An example
 ----------
@@ -282,7 +286,7 @@ while it plays, e.g. for a transcript.
 Choosing a file
 ---------------
 
-An episode often comes in several files, e.g. Opus and AAC. To choose
+A podcast episode often comes in several files, e.g. Opus and AAC. To choose
 one, describe each as a configuration of
 [Media Capabilities](https://developer.mozilla.org/en-US/docs/Web/API/Media_Capabilities_API),
 e.g. `{:type :file :audio {:content-type "audio/mp4"}}`, give them to
