@@ -30,8 +30,8 @@ The namespaces are under `dk.simongray.play-nice`:
 
 Of these, `media.fragment`, `media.captions`, `controls`, `page.embed`
 and `schema` also run on the JVM, e.g. to write a page on the server. Of
-their functions, only `captions/style!`, `controls/listen!` and
-`controls/pointer-seek` need a browser.
+their functions, only `captions/style!`, `controls/listen!`,
+`controls/range-seek` and `controls/slider-seek` need a browser.
 
 
 ## Keys and values
@@ -547,7 +547,8 @@ you give it a `:keymap`, `listen!` uses `player-keys`:
 | `l`, `ArrowRight`, `MediaFastForward` | `:seekforward` |
 | `MediaTrackPrevious`, `MediaTrackNext` | `:previoustrack`, `:nexttrack` |
 
-For a seek bar, `seek-bar-keys` maps these keys to `:seekto` actions:
+For a seek bar of your own, `slider-keys` maps these keys to `:seekto`
+actions. A range input has keys of its own:
 
 | Keys | Seek |
 |---|---|
@@ -565,7 +566,28 @@ when they change.
 
 ### Seek bar
 
-What `seek-aria` returns:
+A seek bar is a range input, `<input type="range">`, or an element of
+your own. Each kind has functions of its own:
+
+| Function | For | Gives |
+|---|---|---|
+| `range-attributes` | A range input | Its attributes, below |
+| `range-seek` | A range input | The seek of its input or change event |
+| `slider-attributes` | An element of your own | Its ARIA attributes, below |
+| `slider-keys` | An element of your own | Its keys for `listen!`, above |
+| `slider-seek` | An element of your own | The seek at a pointer event on it |
+
+What `range-attributes` returns:
+
+| Key | Value |
+|---|---|
+| `:min` | 0 |
+| `:max` | The duration in whole seconds, or the position while it's unknown or infinite, since a browser keeps a value that a lower maximum moved back |
+| `:step` | 1 |
+| `:value` | The position in whole seconds |
+| `:aria-valuetext` | The position in words, from `value-text` |
+
+What `slider-attributes` returns:
 
 | Key | Value |
 |---|---|
@@ -582,12 +604,18 @@ language is the locale you give, or else that of the page, from the
 `lang` of its `html` element, or else the browser's. Where there's no
 Intl.DurationFormat, as on the JVM, the words are English.
 
-For a pointer event on the seek bar that listens for it, `pointer-seek`
-returns the details of a seek to that point, e.g.
-`{:action :seekto :seek-time 1830}`. So a click on the bar can call the
-same handler as the lock screen's scrubber. A point past either end of
-the bar seeks to that end. While the duration is unknown or infinite,
-`pointer-seek` returns nil.
+Both seeks give the details of a seek, so that the bar calls the same
+handler as the lock screen's scrubber:
+
+- For the input event of a range input, which comes while the pointer
+  drags it, `range-seek` gives e.g.
+  `{:action :seekto :seek-time 1830 :fast-seek true}`, and for its
+  change event at the end, the same without the fast seek.
+- For a pointer event on a seek bar of your own that listens for it,
+  `slider-seek` gives the seek to that point, e.g.
+  `{:action :seekto :seek-time 1830}`. A point past either end of the
+  bar seeks to that end. While the duration is unknown or infinite, it
+  gives nil.
 
 
 ## Picture-in-Picture

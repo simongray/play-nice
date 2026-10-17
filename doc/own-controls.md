@@ -5,6 +5,11 @@ a seek bar and keyboard shortcuts of our own. The player starts where
 the listener left off, and shows on the lock screen. We build on the
 project of the [quickstart](quickstart.md), so make that first.
 
+The seek bar here is an element of our own, which shows everything that
+the `controls` namespace does for one. A range input,
+`<input type="range">`, needs less, as the README's
+[Your own controls](../README.md#your-own-controls) shows.
+
 ## The page
 
 Replace `public/index.html` with this page. Its audio element has no
@@ -65,7 +70,7 @@ Replace `src/player/core.cljs` with this:
   (set! (.-textContent (by-id "play")) (if paused "Play" "Pause"))
   (set! (.. (by-id "progress") -style -width)
         (str (if duration (* 100 (/ current-time duration)) 0) "%"))
-  (doseq [[k v] (controls/seek-aria state)]
+  (doseq [[k v] (controls/slider-attributes state)]
     (.setAttribute (by-id "seek-bar") (name k) v)))
 
 (defn remember!
@@ -93,7 +98,7 @@ Replace `src/player/core.cljs` with this:
       ;; the bar gets the pointer's moves while it's pressed, even off it
       (.setPointerCapture bar id))
     (when-let [details (and (.hasPointerCapture bar id)
-                            (controls/pointer-seek e (media/state audio)))]
+                            (controls/slider-seek e (media/state audio)))]
       ((:seekto handlers)
        (assoc details :fast-seek (= "pointermove" (.-type e)))))))
 
@@ -112,7 +117,7 @@ Replace `src/player/core.cljs` with this:
                         :artwork [{:src "cover.png" :sizes "512x512" :type "image/png"}]})
     (controls/listen! (by-id "player") audio handlers)
     (controls/listen! (by-id "seek-bar") audio handlers
-                      {:keymap controls/seek-bar-keys})
+                      {:keymap controls/slider-keys})
     (.addEventListener (by-id "play") "click" #(toggle! audio))
     (doseq [event ["pointerdown" "pointermove" "pointerup"]]
       (.addEventListener (by-id "seek-bar") event #(drag! audio handlers %)))))
@@ -131,7 +136,7 @@ The first `listen!` follows the keys pressed in the player, e.g. k to
 play and pause, and l to skip forward. The second follows the keys of
 the seek bar, e.g. the arrow keys to move a second. The pointer calls
 the same `:seekto` handler as the lock screen's scrubber: in `drag!`,
-`pointer-seek` turns a press on the seek bar into the details of a seek.
+`slider-seek` turns a press on the seek bar into the details of a seek.
 While the pointer drags, the details ask for a fast seek, which lands
 near the point but sooner.
 

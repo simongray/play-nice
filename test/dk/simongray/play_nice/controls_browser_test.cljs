@@ -22,7 +22,7 @@
     (set! (.. bar -style -cssText) "position:fixed;left:100px;top:0;width:200px;height:10px")
     (.appendChild js/document.body bar)
     (.addEventListener bar "pointerdown"
-                       #(swap! seeks conj (controls/pointer-seek % {:duration 3600})))
+                       #(swap! seeks conj (controls/slider-seek % {:duration 3600})))
     (.dispatchEvent bar (js/PointerEvent. "pointerdown" #js {:clientX 150 :clientY 5 :bubbles true}))
     (is (= [{:action :seekto :seek-time 900}] @seeks))
     (.remove bar)))
@@ -33,7 +33,7 @@
     (set! (.-lang html) "da")
     (is (= "12 minutter og 30 sekunder" (controls/value-text 750)))
     (is (= "12 minutter og 30 sekunder"
-           (:aria-valuetext (controls/seek-aria {:current-time 750 :duration 3600}))))
+           (:aria-valuetext (controls/slider-attributes {:current-time 750 :duration 3600}))))
     (is (= "12 minutes, 30 seconds" (controls/value-text 750 "en")) "the locale you give first")
     (set! (.-lang html) "not a language!")
     (is (= (controls/value-text 750 js/undefined) (controls/value-text 750))
@@ -50,7 +50,7 @@
         ^js v    (muted-video)
         ^js bar  (.querySelector p "[role=slider]")
         stops    [(controls/listen! p v handlers)
-                  (controls/listen! bar v handlers {:keymap controls/seek-bar-keys})]
+                  (controls/listen! bar v handlers {:keymap controls/slider-keys})]
         press!   (fn [selector key]
                    (let [^js e (js/KeyboardEvent. "keydown"
                                                   #js {:key        key

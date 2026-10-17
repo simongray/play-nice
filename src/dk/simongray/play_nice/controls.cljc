@@ -16,8 +16,21 @@
       (def stop!
         (listen! player audio handlers))
 
-  Everything but listen! runs on the JVM too, e.g. to write a seek bar's
-  ARIA attributes into a page on the server."
+  A seek bar is one of two kinds, and each has functions of its own:
+
+  - A range input, <input type=\"range\">, which the browser draws, moves
+    with the keys, the pointer and touch, and describes to a screen
+    reader. The functions range-attributes and range-seek only add the
+    position and the seek that the input asks for.
+  - An element of your own, which needs all of that from you:
+    slider-attributes gives it the slider role, slider-keys its keys for
+    listen!, and slider-seek the seek at the pointer.
+
+  A screen reader on a phone adjusts a slider with a swipe, which a range
+  input always follows, so a range input is the safer kind.
+
+  Everything but the functions of events runs on the JVM too, e.g. to
+  write a seek bar's attributes into a page on the server."
   (:require [clojure.string :as str]
             #?(:cljs [dk.simongray.play-nice.media :as media])))
 
@@ -57,10 +70,11 @@
     {:action :seekto :seek-time (+ current-time seconds)}))
 
 ;; WAI-ARIA Authoring Practices, the Media Seek Slider example
-(def seek-bar-keys
-  "The keys of a seek bar, as the APG's Media Seek Slider has them: a
-  second for each arrow, 15 for each page, and the start and the end for
-  Home and End."
+(def slider-keys
+  "The keys of a seek bar that's an element of your own, for listen!, as
+  the APG's Media Seek Slider has them: a second for each arrow, 15 for
+  each page, and the start and the end for Home and End. A range input
+  has keys of its own."
   {"ArrowRight" (seek-by 1)
    "ArrowUp"    (seek-by 1)
    "ArrowLeft"  (seek-by -1)
@@ -72,9 +86,9 @@
                   {:action :seekto :seek-time duration})})
 
 #?(:cljs
-   (defn pointer-seek
-     "The details of a seek to the point of a seek bar that the pointer
-     event `e` is at, for a media element in `state`, a map of its
+   (defn slider-seek
+     "The details of a seek to the point of a seek bar of your own that the
+     pointer event `e` is at, for a media element in `state`, a map of its
      :duration, e.g. {:action :seekto :seek-time 1830}, or nil while the
      duration is unknown or infinite.
 
@@ -124,7 +138,7 @@
 
      - :keymap, a map from each key to an action, or to a function from
        the element's state to the details of one, player-keys by default,
-       or e.g. seek-bar-keys for a seek bar of its own. An action needs
+       or e.g. slider-keys for a seek bar of your own. An action needs
        a handler of the same name, and may be one of your own, e.g.
        {\"f\" :fullscreen} with a :fullscreen handler."
      ([scope element handlers]
@@ -206,11 +220,50 @@
                 (catch :default _
                   (english parts)))))))
 
+;; HTML, the Range state of the input element
+(defn range-attributes
+  "The attributes of a range input that seeks in a media element in
+  `state`, a map of its :current-time and :duration, e.g. from media/state,
+  with the position in words from value-text in the `locale`, e.g.
+
+      (range-attributes {:current-time 750 :duration 3600})
+      ;; => {:min 0 :max 3600 :step 1 :value 750
+      ;;     :aria-valuetext \"12 minutes, 30 seconds\"}
+
+  The input needs a name too, e.g. a label. While the duration is unknown
+  or infinite, the maximum is the position. A browser moves a value past
+  the maximum back to it, and keeps it there when the maximum grows, so a
+  maximum of 0 before the metadata would leave the input at the start of
+  an episode that resumes later on."
+  ([state]
+   (range-attributes state nil))
+  ([{:keys [current-time duration] :as state} locale]
+   (let [now (or (whole current-time) 0)]
+     {:min            0
+      :max            (or (whole duration) now)
+      :step           1
+      :value          now
+      :aria-valuetext (value-text now locale)})))
+
+#?(:cljs
+   (defn range-seek
+     "The details of the seek that the input or change event `e` of a range
+     input asks for, e.g. {:action :seekto :seek-time 1830 :fast-seek
+     true}, for the same handler as the lock screen's scrubber.
+
+     The input event comes while the pointer drags, so it asks for a fast
+     seek, which lands near the point but sooner, and the change event at
+     the end lands on the point."
+     [^js e]
+     {:action    :seekto
+      :seek-time (.. e -target -valueAsNumber)
+      :fast-seek (= "input" (.-type e))}))
+
 ;; WAI-ARIA 1.2, the slider role
-(defn seek-aria
-  "The ARIA attributes of a seek bar for a media element in `state`, a map
-  of its :current-time and :duration, e.g. from media/state, with the
-  position in words from value-text in the `locale`, e.g.
+(defn slider-attributes
+  "The ARIA attributes of a seek bar of your own for a media element in
+  `state`, a map of its :current-time and :duration, e.g. from media/state,
+  with the position in words from value-text in the `locale`, e.g.
 
       {:role           \"slider\"
        :aria-valuemin  0
@@ -221,7 +274,7 @@
   The seek bar needs a name of its own too, e.g. an :aria-label. While the
   duration is unknown or infinite, it has no maximum."
   ([state]
-   (seek-aria state nil))
+   (slider-attributes state nil))
   ([{:keys [current-time duration] :as state} locale]
    (let [now (or (whole current-time) 0)]
      (cond-> {:role           "slider"

@@ -220,35 +220,38 @@ page:
 ```clojure
 (require '[dk.simongray.play-nice.controls :as controls])
 
-;; the element that holds the player's controls, and the seek bar in it
+;; the element that holds the player's controls
 (def player
   (js/document.getElementById "player"))
 
-(def seek-bar
-  (js/document.getElementById "seek-bar"))
-
 ;; the handlers of the lock screen above
 (controls/listen! player audio handlers)
-
-;; on the seek bar, the arrow keys move a second instead of skipping
-(controls/listen! seek-bar audio handlers {:keymap controls/seek-bar-keys})
 ```
 
-A screen reader also needs to know that your seek bar is a slider, and
-which position it shows. For that, `seek-aria` returns the seek bar's
-[ARIA attributes](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
-from the element's state, with the position in words in the page's
-language:
+For the seek bar, use a range input, `<input type="range">`, if you can.
+The browser then handles its keys, the pointer and touch, and a screen
+reader on a phone can adjust it with a swipe. Give it the attributes of
+`range-attributes`, whose position is in words in the page's language,
+and seek at its input and change events with `range-seek`:
 
 ```clojure
-(controls/seek-aria (:player @app))
-;; => e.g. {:role "slider" :aria-valuemin 0 :aria-valuemax 3600
-;;          :aria-valuenow 754 :aria-valuetext "12 minutes, 34 seconds"}
+(controls/range-attributes (:player @app))
+;; => e.g. {:min 0 :max 3600 :step 1 :value 754
+;;          :aria-valuetext "12 minutes, 34 seconds"}
+
+(doseq [event ["input" "change"]]
+  (.addEventListener seek-bar event #((:seekto handlers) (controls/range-seek %))))
 ```
 
 Without the words, a screen reader would read the position as a bare
-754. [Build a player with your own controls](doc/own-controls.md) shows
-the whole player.
+754.
+
+A seek bar of your own needs the rest from you too. `slider-attributes`
+gives it the
+[ARIA attributes of a slider](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/),
+`slider-keys` gives `listen!` its keys, e.g. the arrows that move a
+second, and `slider-seek` gives the seek at the pointer.
+[Build a player with your own controls](doc/own-controls.md) builds one.
 
 
 Chapters and captions
