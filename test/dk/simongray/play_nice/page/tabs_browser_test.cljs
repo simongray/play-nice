@@ -72,7 +72,14 @@
     (swap! detaches conj (tabs/attach! a app {:id-fn id :handlers {:pause #(.pause a)}}))
     (swap! detaches conj (tabs/attach! b app {:id-fn id :window other :align? true}))
     (swap! detaches conj (tabs/watch! app #(swap! seen conj %) {:window other}))
-    (run #(.play a)
+    (run #(when (zero? (.-readyState a))
+            (next-event a "loadedmetadata"))
+         ;; WebKit on Linux can report a duration of 0 for this file once it
+         ;; has played, which keeps a seek at 0, so it moves before it plays
+         #(let [seeked (next-event a "seeked")]
+            (set! (.-currentTime a) 0.5)
+            seeked)
+         #(.play a)
          #(wait 300)
          #(is (= ["episode-1" false] ((juxt :id :paused) (last @seen)))
               "the other window learns what plays")
@@ -80,16 +87,14 @@
             (tabs/press! app {:action :pause} {:window other})
             paused)
          #(is (.-paused a) "an action of the other window pauses it where it plays")
-         #(do (set! (.-currentTime a) 0.5)
-              (tabs/share! a)
-              (wait 300))
-         #(let [playing (next-event b "playing")]
-            (.play b)
-            playing)
-         ;; for a seek that an engine dropped as the element started, made
-         ;; again as it plays
          #(wait 100)
-         #(is (< 0.45 (.-currentTime b) 0.95)
-              "the other window starts from where the playback is")
+         #(let [left    (.-currentTime a)
+                playing (next-event b "playing")]
+            (.play b)
+            (.then playing
+                   (fn [_]
+                     (is (< 0.45 left))
+                     (is (< (abs (- (.-currentTime b) left)) 0.15)
+                         "the other window starts from where the playback is"))))
          #(do (.pause b)
               (run! (fn [detach!] (detach!)) @detaches)))))

@@ -212,27 +212,13 @@
                              (swap! page assoc :own s)
                              (post! page {:type :state :state s})
                              (notify! page))))
-         ;; the position it moved to, or true where it set only the rate
          align!        (fn []
                          (when-let [n (and page (newer-elsewhere page (id-fn) @changed))]
+                           (when-let [t (position n (js/Date.now))]
+                             (set! (.-currentTime element) t))
                            (when (number? (:playback-rate n))
                              (set! (.-playbackRate element) (:playback-rate n)))
-                           (if-let [t (position n (js/Date.now))]
-                             (do (set! (.-currentTime element) t)
-                                 t)
-                             true)))
-         ;; WebKit with GStreamer, as on Linux, can drop a seek made as the
-         ;; element starts, which then plays from the start, so the seek is
-         ;; made again once it plays, where it didn't hold
-         realign!      (fn [t]
-                         (let [asked (js/Date.now)]
-                           (.addEventListener
-                            element "playing"
-                            (fn [_]
-                              (when (and (< (- (js/Date.now) asked) 5000)
-                                         (< (.-currentTime element) (- t 0.25)))
-                                (set! (.-currentTime element) t)))
-                            #js {:once true})))
+                           true))
          beat!         (fn []
                          (some-> @heartbeat js/clearInterval)
                          (reset! heartbeat (js/setInterval #(share! {}) heartbeat-ms)))
@@ -264,9 +250,8 @@
                            (when release
                              (release nil))))
          played!       (fn [_]
-                         (when-let [t (and align? (align!))]
-                           (when (number? t)
-                             (realign! t)))
+                         (when align?
+                           (align!))
                          (reset! changed (js/Date.now))
                          (hold!)
                          (share! {})
