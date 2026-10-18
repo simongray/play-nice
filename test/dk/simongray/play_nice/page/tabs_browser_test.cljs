@@ -86,6 +86,9 @@
          #(let [playing (next-event b "playing")]
             (.play b)
             playing)
+         ;; for a seek that an engine dropped as the element started, made
+         ;; again as it plays
+         #(wait 100)
          #(is (< 0.45 (.-currentTime b) 0.95)
               "the other window starts from where the playback is")
          #(do (.pause b)
