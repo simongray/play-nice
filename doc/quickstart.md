@@ -14,7 +14,7 @@ Make a folder for the project, and put this in its `deps.edn`:
 {:paths ["src"]
  :deps  {org.clojure/clojure    {:mvn/version "1.12.5"}
          thheller/shadow-cljs   {:mvn/version "3.5.3"}
-         dk.simongray/play-nice {:mvn/version "0.2.0"}}}
+         dk.simongray/play-nice {:mvn/version "0.3.0"}}}
 ```
 
 Then put this in its `shadow-cljs.edn`. It defines a build called `app`
