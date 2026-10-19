@@ -182,6 +182,10 @@
     (is (= {:volume 0 :refused :not-finite} (media/volume! el "loud"))
         "the volume as it was")))
 
+(deftest a-level-that-nothing-keeps
+  (is (nil? (media/kept-level (str "play-nice-test-" (random-uuid))))
+      "nil where the browser keeps none, e.g. in Node"))
+
 (deftest pausing-and-muting
   (let [^js el  (element {})
         paused (atom 0)]

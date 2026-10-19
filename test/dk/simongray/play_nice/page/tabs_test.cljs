@@ -106,10 +106,15 @@
                            (.dispatchEvent el (js/Event. "pause")))))
     el))
 
+;; An answer takes two tasks of the stand-in's channels, its question's and
+;; its own, so the promise waits two tasks after its time, which come after
+;; any task that was due before them, even when the page was held up, e.g.
+;; by Firefox's first read of localStorage
 (defn settle
   "A promise that resolves once the messages before it have arrived."
   []
-  (js/Promise. (fn [resolve _] (js/setTimeout resolve 10))))
+  (js/Promise. (fn [resolve _]
+                 (js/setTimeout #(js/setTimeout (fn [] (js/setTimeout resolve 0)) 0) 10))))
 
 (defn stop-all!
   "Call each of the functions in the atom `stops`, which detach and stop."

@@ -296,6 +296,28 @@
        (cond-> {:volume v}
          (not= kept level) (assoc :requested level))))))
 
+;; The level of a volume slider belongs to the device rather than to the
+;; user, e.g. a phone's speaker or a desktop's headphones, so it's kept in
+;; the browser, apart from what an app syncs between devices
+(defn kept-level
+  "The level of a volume slider, from 0 to 1, that keep-level! kept in
+  localStorage under `key`, or nil where this browser keeps none."
+  [key]
+  (try
+    (let [level (js/parseFloat (.getItem js/localStorage key))]
+      (when (js/Number.isFinite level)
+        level))
+    (catch :default _ nil)))
+
+(defn keep-level!
+  "Keep the `level` of a volume slider, from 0 to 1, in localStorage under
+  `key`, for kept-level at the next visit, where the browser keeps
+  anything."
+  [key level]
+  (try
+    (.setItem js/localStorage key (str level))
+    (catch :default _ nil)))
+
 (defn muted!
   "Mute the media `element`, or unmute it where `muted?` is false, and
   return e.g. {:muted true}."

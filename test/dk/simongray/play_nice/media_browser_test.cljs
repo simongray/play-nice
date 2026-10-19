@@ -18,6 +18,14 @@
   [x y]
   (< (abs (- x y)) 0.01))
 
+(deftest a-kept-level
+  (let [key (str "play-nice-test-" (random-uuid))]
+    (media/keep-level! key 0.4)
+    (is (= 0.4 (media/kept-level key)) "the level that the browser keeps")
+    (.setItem js/localStorage key "loud")
+    (is (nil? (media/kept-level key)) "but no level that isn't a number")
+    (.removeItem js/localStorage key)))
+
 (deftest loading-a-source
   (let [^js v (muted-video)
         src   (silence)]
