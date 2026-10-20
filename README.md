@@ -167,10 +167,6 @@ view shows the position, e.g. on a seek bar.
 element at the system's volume. With `volume-locked!`, you can find that
 out and hide your volume slider.
 
-The level of a volume slider belongs to the device, so keep it in the
-browser for the next visit with `keep-level!`, and set it again from
-`kept-level`, e.g. `(media/kept-level "my-app.volume")`.
-
 
 The lock screen
 ---------------
