@@ -24,7 +24,7 @@ The namespaces are under `dk.simongray.play-nice`:
 | `display.remote-playback` | Casting and AirPlay |
 | `display.wake-lock` | The screen kept on while the media plays |
 | `page.autoplay` | The browser's autoplay policy, the user's next click, and a muted video that plays while it's in view |
-| `page.tabs` | One playback across the tabs of an app |
+| `page.tabs` | One player at a time across the tabs of an app |
 | `page.embed` | The `allow` attribute of an iframe that embeds a player |
 | `schema` | Malli schemas of the maps |
 
@@ -798,7 +798,7 @@ out of view only while it's muted. A video that ends doesn't count as
 paused by the visitor.
 
 
-## One playback across tabs
+## One player across tabs
 
 The `page.tabs` namespace follows the
 [Web Locks API](https://www.w3.org/TR/web-locks/). When the element
@@ -810,42 +810,28 @@ playing. In a window that fires no events, e.g. Node's global object,
 which has Web Locks from Node 24.5, it doesn't follow `pagehide` and
 `pageshow`.
 
-Through a
-[BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-other-browsing-contexts)
-of the same name, `attach!` also tells the other tabs of the element's
-playback: the keys of `shared-keys` from `media/state`, the `:id` of
-what it plays, `:at`, the time that the position was taken, and
-`:changed`, when the listener last changed it. It tells them as the
-element plays and pauses, and every `heartbeat-ms` while it plays, and
-answers a tab that asks as it opens. A change of a paused element isn't
-told, since a seek that the listener makes looks like the one that loads
-an episode, so call `share!` after the listener's change, e.g. a skip.
-
 | Option | Value |
 |---|---|
-| `:window` | The window whose navigator holds the locks, and whose BroadcastChannel reaches the other tabs, the page's by default |
-| `:id-fn` | A function of no arguments that gives what the element plays, as data that EDN prints, by default its `currentSrc` |
-| `:handlers` | The handlers of the actions that other tabs send with `press!` while the element plays, as for `controls/listen!` |
-| `:align?` | `true` to start from the newest playback that another tab shared of the same `:id`, when the element plays |
+| `:window` | The window whose navigator holds the locks, the page's by default |
 
-The other functions are these:
+Two pure functions are for an app that sends its playback to its other
+tabs itself, e.g. over a
+[BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-other-browsing-contexts).
+Each playback is a map of keys from `media/state`, with `:at`, the time
+in milliseconds that its `:current-time` was taken, and `:changed`, when
+it last changed.
 
-- `watch!` calls a function with the newest playback across the tabs:
-  one that plays, or else the one that changed last. It's `:here?` when
-  it's this tab's own, and a playing one that's quiet for three
-  heartbeats counts as paused and `:gone`, e.g. after its tab crashed.
-- `position` gives where a playback is by a time, moved on at its rate
+- `newest` returns the newest of the playbacks by a time: one that
+  plays, or else the one that changed last. A playing one that's older
+  than three `heartbeat-ms` counts as paused and `:gone`, e.g. after its
+  tab crashed, so send a playing one at least that often.
+- `position` returns where a playback is by a time, moved on at its rate
   while it plays, as the
   [Media Session](https://w3c.github.io/mediasession/#position-state-sec)
   works out the position of the lock screen.
-- `press!` sends the details of an action, e.g. `{:action :pause}`, to
-  the tab that plays, which runs it through its `:handlers`.
-- `align!` moves a paused element to the newest playback, e.g. before a
-  skip in a tab that doesn't play.
 
-A message from a channel evicts a page from the back/forward cache in
-Chrome and Firefox, so a tab with an open channel comes back from it
-reloaded once another tab has played.
+A message on a channel evicts a page from the back/forward cache in
+Chrome and Firefox.
 
 
 ## Embedding
