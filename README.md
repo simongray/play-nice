@@ -30,7 +30,7 @@ Hard to find elsewhere
 
 A lot of what this library does you'd be hard pressed to find a unified API for elsewhere:
 
-- [One playback across the tabs of an app](#tabs-and-the-screen), so that two tabs don't play at once, and each shows and controls what plays.
+- [A single player across the tabs of an app](#tabs-and-the-screen), so that two tabs don't play at once.
 - [Chapters in every browser](#chapters-and-captions), as a hidden text track, since only Chromium currently accepts chapters as metadata.
 - [MP3 and AAC found playable](#choosing-a-file) even when the browser API says they can't be.
 - [Keyboard shortcuts that WCAG recommends](#your-own-controls), and a seek bar that a screen reader reads in the user's language.
@@ -384,24 +384,9 @@ named for your app:
 (tabs/attach! audio "my-podcast-app")
 ```
 
-It also tells the other tabs what plays, where and how fast, so that the
-player of every tab can show the same playback, and the controls of any
-tab can act on it:
-
-```clojure
-(tabs/attach! audio "my-podcast-app"
-              {:id-fn    #(:episode @app)   ; what the element plays
-               :handlers handlers           ; for the actions of other tabs
-               :align?   true})             ; start from where the playback is
-
-(tabs/watch! "my-podcast-app" #(swap! app assoc :playback %))
-
-(tabs/press! "my-podcast-app" {:action :pause})  ; e.g. from another tab
-```
-
-The playback that `watch!` gives moves on in a tab that doesn't play, as
-`tabs/position` works it out, and only the tab that plays tells where it
-is, so that a tab that only shows it never saves its position.
+If you send the playback to your app's other tabs yourself, e.g. to show
+it in each of them, `tabs/newest` picks the newest of the playbacks that
+a tab received, and `tabs/position` moves one on to where it is by now.
 
 A playing video keeps the screen on, but audio doesn't, so a phone's
 screen goes dark while an episode plays, even when the page shows its
