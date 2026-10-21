@@ -1,4 +1,4 @@
-(ns dk.simongray.play-nice.page.tabs
+(ns ^:runtime dk.simongray.play-nice.page.tabs
   "One player at a time across the tabs of an app, through Web Locks.
 
   On a desktop, no engine stops the audio of one tab when another tab
