@@ -13,11 +13,14 @@
   "What only a runtime namespace may use."
   #"localStorage|BroadcastChannel|\.-locks|navigator\.locks|add-watch")
 
+;; The quantifiers of the strings are possessive and the loop unrolled,
+;; since java.util.regex recurses once a character for (?:a|b)*, which a
+;; long docstring overflows the stack with
 (defn code
   "The source `s` without its strings and comments."
   [s]
   (-> s
-      (str/replace #"\"(?:\\.|[^\"\\])*\"" "\"\"")
+      (str/replace #"\"[^\"\\]*+(?:\\.[^\"\\]*+)*+\"" "\"\"")
       (str/replace #";[^\n]*" "")))
 
 (defn runtime?
