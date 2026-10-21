@@ -49,7 +49,7 @@ release from [Clojars](https://clojars.org/dk.simongray/play-nice) to
 the `:deps` of your `deps.edn`:
 
 ```clojure
-dk.simongray/play-nice {:mvn/version "0.5.0"}
+dk.simongray/play-nice {:mvn/version "0.6.0"}
 ```
 
 With shadow-cljs, also set `:deps true` in your `shadow-cljs.edn`, so
