@@ -8,16 +8,16 @@
   ;; clojure -M:cljs compile browser-test  (the tests in a browser)
   ;; clojure -M:cljs node-repl             (a REPL, with an nREPL server)
   :cljs {:extra-paths ["test"]
-         :extra-deps  {org.clojure/clojure {:mvn/version "1.12.5"}
-                       thheller/shadow-cljs {:mvn/version "3.5.3"}
-                       metosin/malli        {:mvn/version "0.20.1"}}
+         :extra-deps  {org.clojure/clojure {:mvn/version "1.12.6"}
+                       thheller/shadow-cljs {:mvn/version "3.5.7"}
+                       metosin/malli        {:mvn/version "0.20.3"}}
          :main-opts   ["-m" "shadow.cljs.devtools.cli"]}
 
   ;; clojure -X:test  (the tests of the .cljc namespaces on the JVM)
   :test {:extra-paths ["test"]
          :extra-deps  {io.github.cognitect-labs/test-runner
                        {:git/tag "v0.5.1" :git/sha "dfb30dd"}
-                       metosin/malli {:mvn/version "0.20.1"}}
+                       metosin/malli {:mvn/version "0.20.3"}}
          :exec-fn     cognitect.test-runner.api/test}
 
   ;; clojure -T:build jar | install | deploy  (see build.clj)
