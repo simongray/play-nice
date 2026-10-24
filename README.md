@@ -385,8 +385,9 @@ named for your app:
 ```
 
 If you send the playback to your app's other tabs yourself, e.g. to show
-it in each of them, `tabs/newest` picks the newest of the playbacks that
-a tab received, and `tabs/position` moves one on to where it is by now.
+it in each of them, `newest` in `page.tabs.playback` picks the newest of
+the playbacks that a tab received, and `position` moves one on to where
+it is by now.
 
 A playing video keeps the screen on, but audio doesn't, so a phone's
 screen goes dark while an episode plays, even when the page shows its

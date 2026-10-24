@@ -25,13 +25,15 @@ The namespaces are under `dk.simongray.play-nice`:
 | `display.wake-lock` | The screen kept on while the media plays |
 | `page.autoplay` | The browser's autoplay policy, the user's next click, and a muted video that plays while it's in view |
 | `page.tabs` | One player at a time across the tabs of an app |
+| `page.tabs.playback` | The playbacks that an app sends to its other tabs |
 | `page.embed` | The `allow` attribute of an iframe that embeds a player |
 | `schema` | Malli schemas of the maps |
 
-Of these, `media.fragment`, `media.captions`, `controls`, `page.embed`
-and `schema` also run on the JVM, e.g. to write a page on the server. Of
-their functions, only `captions/style!`, `controls/listen!`,
-`controls/range-seek` and `controls/slider-seek` need a browser.
+Of these, `media.fragment`, `media.captions`, `controls`,
+`page.tabs.playback`, `page.embed` and `schema` also run on the JVM, e.g.
+to write a page on the server. Of their functions, only
+`captions/style!`, `controls/listen!`, `controls/range-seek` and
+`controls/slider-seek` need a browser.
 
 
 ## Keys and values
@@ -814,8 +816,8 @@ which has Web Locks from Node 24.5, it doesn't follow `pagehide` and
 |---|---|
 | `:window` | The window whose navigator holds the locks, the page's by default |
 
-Two pure functions are for an app that sends its playback to its other
-tabs itself, e.g. over a
+Two pure functions in `page.tabs.playback` are for an app that sends its
+playback to its other tabs itself, e.g. over a
 [BroadcastChannel](https://html.spec.whatwg.org/multipage/web-messaging.html#broadcasting-to-other-browsing-contexts).
 Each playback is a map of keys from `media/state`, with `:at`, the time
 in milliseconds that its `:current-time` was taken, and `:changed`, when
